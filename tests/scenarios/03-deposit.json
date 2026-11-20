@@ -1,0 +1,6 @@
+{
+  "random_motes": false,
+  "random_shades": false,
+  "player": { "pos": [0, 0, 2.5], "carried": 3 },
+  "lanterns": [{ "id": "L1", "pos": [0, 0, 0] }]
+}

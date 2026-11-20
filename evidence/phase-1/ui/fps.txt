@@ -1,0 +1,1 @@
+measured requestAnimationFrame rate: ~60 fps (1440x900, Chromium headless)

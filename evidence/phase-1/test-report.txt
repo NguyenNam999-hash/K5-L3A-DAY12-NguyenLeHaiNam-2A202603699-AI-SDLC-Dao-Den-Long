@@ -1,0 +1,21 @@
+
+ RUN  v5.1.1 /Users/namnlh/Desktop/workspace/AI-code/ResearchAgent-temp/K5-L3A-DAY12-NguyenLeHaiNam-2A202603699-AI-SDLC-Dao-Den-Long
+
+scenario file is not valid JSON: Expected property name or '}' in JSON at position 2 (line 1 column 3)
+invalid input: scenario.player.pos: expected [x, y, z]
+inputs.frames[1].tick: ticks must increase strictly (5 after 5)
+inputs.frames[0].move: components must be within [-1, 1]
+inputs file not found: /var/folders/8y/zbxw7j8x6tq43p5pdt0txn_r0000gp/T/dao-den-long-Xxg6lb/missing.json
+--seed is required
+Usage: node dist-node/headless/main.js --seed <int> --night 1 --ticks <int> --out <file.jsonl>
+       [--scenario <file.json>] [--inputs <file.json>] [--snapshot-every <int>]
+--seed: expected an integer, got "x"
+Usage: node dist-node/headless/main.js --seed <int> --night 1 --ticks <int> --out <file.jsonl>
+       [--scenario <file.json>] [--inputs <file.json>] [--snapshot-every <int>]
+--night: only night 1 exists in Phase 1 (got 2)
+
+ Test Files  3 passed (3)
+      Tests  43 passed (43)
+   Start at  15:34:26
+   Duration  158ms (tests 39%, import 28%, transform 25%, worker 8%)
+

@@ -1,0 +1,44 @@
+{
+  "seed": 7,
+  "state": "won",
+  "ticks": 5282,
+  "score": 2775,
+  "time_left_s": 211.967,
+  "flames": 1,
+  "carried": 0,
+  "stats": {
+    "motes": 39,
+    "lanterns": 5,
+    "stuns": 31,
+    "hits": 2
+  },
+  "lanterns": [
+    {
+      "id": "L1",
+      "lit": true,
+      "deposited": 3
+    },
+    {
+      "id": "L2",
+      "lit": true,
+      "deposited": 3
+    },
+    {
+      "id": "L3",
+      "lit": true,
+      "deposited": 3
+    },
+    {
+      "id": "L4",
+      "lit": true,
+      "deposited": 3
+    },
+    {
+      "id": "L5",
+      "lit": true,
+      "deposited": 3
+    }
+  ],
+  "last_interact_tick": 5281,
+  "inputs_frames": 4670
+}

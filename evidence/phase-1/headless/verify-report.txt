@@ -1,0 +1,14 @@
+Dao Den Long - Phase 1 headless verification
+date: 2026-11-20T08:36:32.823Z
+node: v24.14.0
+
+01-movement: 60 ticks
+02-pickup: 120 ticks
+03-deposit: 5 ticks
+04-pulse: 3 ticks
+05-hit: 30 ticks
+06-win: 5 ticks
+07-dawn: 120 ticks
+08-invalid-inputs: 1 ticks
+
+ALL CHECKS PASSED
