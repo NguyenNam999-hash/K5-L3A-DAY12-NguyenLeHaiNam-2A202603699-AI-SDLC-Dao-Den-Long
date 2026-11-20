@@ -42,9 +42,21 @@ export const ACTION_LABELS: Record<Action, string> = {
 
 export const ACTIONS = Object.keys(DEFAULT_BINDINGS) as Action[];
 
+/** Codes the game keeps for camera, audio and escape, so a rebind cannot shadow them. */
+export const RESERVED_CODES = ['Escape', 'KeyQ', 'KeyM'] as const;
+
+export const RESERVED_LABELS: Record<string, string> = {
+  Escape: 'thoát / huỷ',
+  KeyQ: 'nhìn từ trên cao',
+  KeyM: 'tắt âm thanh',
+};
+
 const STORAGE_KEY = 'dao-den-long.keys.v1';
 
-export type SetResult = { ok: true } | { ok: false; conflict: Action };
+export type SetResult =
+  | { ok: true }
+  | { ok: false; conflict: Action }
+  | { ok: false; reserved: string };
 
 export function formatCode(code: string): string {
   if (code.startsWith('Key')) return code.slice(3).toUpperCase();
@@ -87,6 +99,7 @@ export class Keybinds {
   }
 
   set(action: Action, code: string): SetResult {
+    if ((RESERVED_CODES as readonly string[]).includes(code)) return { ok: false, reserved: code };
     const conflict = ACTIONS.find((other) => other !== action && this.bindings[other] === code);
     if (conflict) return { ok: false, conflict };
     this.bindings[action] = code;

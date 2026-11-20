@@ -100,7 +100,7 @@ node dist-node/app.js --export-leaderboard out.json
 ## Kiểm chứng
 
 ```bash
-npm test          # 134 unit test (Vitest)
+npm test          # 135 unit test (Vitest)
 npm run typecheck # tsc --noEmit
 npm run build     # headless + app server + UI (gồm bench.html)
 npm run verify    # 35 kiểm tra trên CLI đã build, ghi evidence/phase-4/headless/
@@ -224,7 +224,7 @@ src/headless/    CLI JSONL + soak runner
 src/server/      server tĩnh dist/ + API leaderboard + export CLI
 src/bench/       trang benchmark (bench.html)
 src/render/      Three.js: world, HUD, minimap, alerts, keybinds, settings, audio, chiến dịch 60 Hz
-tests/           134 unit test + scenario mẫu
+tests/           135 unit test + scenario mẫu
 scripts/         verify.mjs (35 kiểm tra), bench.mjs, bench-stats.mjs, bot.ts, shots.mjs
 evidence/        bằng chứng phase-1..4
 docs/            SPEC, EVIDENCE, AI-LOG, RETRO, BENCHMARK, ADR, CHANGELOG, demo

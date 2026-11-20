@@ -1,5 +1,5 @@
 import type { AudioFx } from './audio';
-import { ACTIONS, ACTION_LABELS, formatCode, Keybinds, type Action } from './keybinds';
+import { ACTIONS, ACTION_LABELS, formatCode, Keybinds, RESERVED_LABELS, type Action } from './keybinds';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -184,7 +184,11 @@ export class Settings {
       }
       const result = this.keybinds.set(action, event.code);
       if (!result.ok) {
-        this.showKeyError(`Phím ${formatCode(event.code)} đang dùng cho ${ACTION_LABELS[result.conflict]}`);
+        if ('reserved' in result) {
+          this.showKeyError(`Phím ${formatCode(result.reserved)} được dành cho ${RESERVED_LABELS[result.reserved] ?? 'hệ thống'}`);
+        } else {
+          this.showKeyError(`Phím ${formatCode(event.code)} đang dùng cho ${ACTION_LABELS[result.conflict]}`);
+        }
       } else {
         this.showKeyError('');
         this.onKeybindsChange();

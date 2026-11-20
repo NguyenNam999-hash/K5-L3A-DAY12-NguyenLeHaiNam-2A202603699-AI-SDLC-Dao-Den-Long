@@ -158,9 +158,14 @@ async function main() {
     if (!firstFrameAt) throw new Error('benchmark scene never rendered');
     const loadMs = firstFrameAt - Math.round(performance.timeOrigin + t0);
 
-    while ((await page.evaluate(() => window.__benchPhase)) !== 'measure') {
+    const measureDeadline = Date.now() + 60000;
+    let phase = '';
+    while (Date.now() < measureDeadline) {
+      phase = await page.evaluate(() => window.__benchPhase ?? '');
+      if (phase === 'measure' || phase === 'done') break;
       await new Promise((r) => setTimeout(r, 50));
     }
+    if (phase !== 'measure' && phase !== 'done') throw new Error('benchmark never reached the measurement window');
     peak = treeRssMb();
     sampler = setInterval(() => {
       const value = treeRssMb();
