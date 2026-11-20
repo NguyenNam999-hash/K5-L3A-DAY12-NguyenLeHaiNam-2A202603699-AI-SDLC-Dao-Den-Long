@@ -59,6 +59,11 @@ let lastCountdownSecond = 99;
 let windWasActive = false;
 let windWarned = false;
 
+/** Hold E for this long to pause the simulation and look straight down. */
+const OVERVIEW_HOLD_MS = 180;
+let overview = false;
+let overviewTimer = 0;
+
 const keys = new Set<string>();
 let jumpQueued = false;
 let interactQueued = false;
@@ -67,6 +72,8 @@ let dashQueued = false;
 
 const camPos = new THREE.Vector3(0, 6, -10);
 const lookTarget = new THREE.Vector3();
+const overviewEye = new THREE.Vector3();
+const overviewLook = new THREE.Vector3();
 
 const INTRO: Record<NightId, { name: string; story: string; tip: string }> = {
   1: {
@@ -102,7 +109,7 @@ resize();
 
 function readInput(): InputFrame {
   const forward = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
-  const side = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
+  const side = (keys.has('KeyA') ? 1 : 0) - (keys.has('KeyD') ? 1 : 0);
   const input: InputFrame = {
     moveX: side,
     moveZ: forward,
@@ -212,6 +219,8 @@ function openPause(): void {
   if (phase !== 'playing' || game.state !== 'playing') return;
   phase = 'paused';
   accumulator = 0;
+  overview = false;
+  window.clearTimeout(overviewTimer);
   hud.setPaused('Tạm dừng · P để tiếp tục');
   pauseScreen.hidden = false;
   if (document.pointerLockElement === canvas) document.exitPointerLock();
@@ -326,6 +335,15 @@ function handleEvents(): void {
 function updateCamera(dt: number): void {
   const smoothing = 1 - Math.pow(0.0008, dt);
   lookTarget.set(game.px, game.py + 1.55, game.pz);
+
+  if (overview) {
+    overviewLook.set(game.px, game.py, game.pz);
+    overviewEye.set(game.px, game.py + 40, game.pz + 10);
+    camPos.lerp(overviewEye, smoothing);
+    camera.position.copy(camPos);
+    camera.lookAt(overviewLook);
+    return;
+  }
   const yaw = THREE.MathUtils.degToRad(yawDeg);
   const distance = 9.6;
   const horizontal = Math.cos(pitch) * distance;
@@ -383,7 +401,7 @@ function frame(now: number): void {
   const dt = Math.min(0.1, (now - lastFrame) / 1000);
   lastFrame = now;
 
-  if (phase === 'playing' && game.state === 'playing') {
+  if (phase === 'playing' && game.state === 'playing' && !overview) {
     elapsed += dt;
     accumulator += dt;
     let guard = 0;
@@ -435,11 +453,22 @@ function frame(now: number): void {
 // --- Keyboard / mouse ---
 
 window.addEventListener('keydown', (event) => {
-  if (['Space', 'KeyE', 'KeyF', 'ShiftLeft', 'ShiftRight', 'ArrowUp', 'ArrowDown'].includes(event.code)) {
+  if (['Space', 'KeyE', 'KeyQ', 'KeyF', 'ShiftLeft', 'ShiftRight', 'ArrowUp', 'ArrowDown'].includes(event.code)) {
     event.preventDefault();
   }
   if (event.repeat) return;
   keys.add(event.code);
+
+  if (event.code === 'KeyQ' && phase === 'playing' && game.state === 'playing') {
+    window.clearTimeout(overviewTimer);
+    overviewTimer = window.setTimeout(() => {
+      if (!keys.has('KeyQ') || phase !== 'playing' || game.state !== 'playing') return;
+      overview = true;
+      accumulator = 0;
+      hud.setPaused('Nhìn từ trên cao · thả Q để tiếp tục');
+    }, OVERVIEW_HOLD_MS);
+    return;
+  }
 
   if (event.code === 'KeyP' || event.code === 'Escape') {
     if (!document.querySelector<HTMLDivElement>('#settings')!.hidden) {
@@ -474,15 +503,31 @@ window.addEventListener('keydown', (event) => {
 });
 window.addEventListener('keyup', (event) => {
   keys.delete(event.code);
+  if (event.code === 'KeyQ') {
+    window.clearTimeout(overviewTimer);
+    if (overview) {
+      overview = false;
+      if (phase === 'playing') hud.setPaused(null);
+      lastFrame = performance.now();
+      accumulator = 0;
+    }
+  }
 });
-window.addEventListener('blur', () => keys.clear());
+window.addEventListener('blur', () => {
+  keys.clear();
+  window.clearTimeout(overviewTimer);
+  if (overview) {
+    overview = false;
+    if (phase === 'playing') hud.setPaused(null);
+  }
+});
 
 canvas.addEventListener('click', () => {
   requestPointerLock();
 });
 
 window.addEventListener('mousemove', (event) => {
-  if (document.pointerLockElement !== canvas) return;
+  if (document.pointerLockElement !== canvas || overview) return;
   const sensitivity = settings.values.sensitivity;
   yawDeg += event.movementX * sensitivity;
   pitch = THREE.MathUtils.clamp(pitch + event.movementY * sensitivity * 0.01, -0.05, 1.05);

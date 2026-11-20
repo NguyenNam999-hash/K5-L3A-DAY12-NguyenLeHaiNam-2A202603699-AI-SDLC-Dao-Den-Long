@@ -1,8 +1,8 @@
 Dao Den Long - Phase 2 headless verification (Contract v1.1)
-date: 2026-11-20T10:10:22.156Z
+date: 2026-11-20T10:49:47.906Z
 node: v24.14.0
 checks: 3259
-full-night-3: 150 ms
+full-night-3: 141 ms
 
 01-movement: night 1, 60 ticks
 02-pickup: night 1, 60 ticks

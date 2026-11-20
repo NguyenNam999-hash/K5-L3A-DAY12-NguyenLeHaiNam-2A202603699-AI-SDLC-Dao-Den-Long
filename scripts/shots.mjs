@@ -98,6 +98,17 @@ await page.evaluate(() => {
 await page.waitForTimeout(1400);
 await page.screenshot({ path: join(outDir, '04-night1-lit.png') });
 
+// Hold Q: simulation freezes, camera goes top-down.
+await page.keyboard.down('q');
+await page.waitForTimeout(700);
+const overviewTickBefore = await page.evaluate(() => window.__dao.game().tick);
+await page.waitForTimeout(600);
+const overviewTickAfter = await page.evaluate(() => window.__dao.game().tick);
+await page.screenshot({ path: join(outDir, '04b-overview.png') });
+await page.keyboard.up('q');
+console.log(`overview hold: ticks ${overviewTickBefore} -> ${overviewTickAfter} (should be equal)`);
+await page.waitForTimeout(400);
+
 // Pause freezes tick, then settings.
 await page.keyboard.press('p');
 await page.waitForTimeout(350);

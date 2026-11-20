@@ -24,6 +24,7 @@ npm run dev
 | Chuột (nhấp vào màn chơi để khóa) | Xoay camera |
 | `Space` | Nhảy (7 m/s, chỉ khi chạm đất) |
 | `Shift` | Lướt 14 m/s trong 0.2 s, hồi chiêu 1.5 s |
+| `Q` | Giữ để tạm dừng và nhìn từ trên cao (thả ra để chơi tiếp) |
 | `E` | Nạp ánh sáng vào Đèn Lồng Lớn gần nhất (10 đom đóm) |
 | `F` | Tỏa sáng: làm choáng và đẩy Bóng Mực, tốn 3 đom đóm |
 | `M` | Bật/tắt âm thanh |
@@ -119,6 +120,7 @@ Ví dụ thật (bot thắng Đêm 1, xem `evidence/phase-2/headless/bot-summary
 | A10 | Tạm dừng trong trình duyệt ngừng gọi `step()`; lõi vẫn hỗ trợ input `pause` cho headless. |
 | A11 | `fall_enabled` giữ trong contract với giá trị `true`; hằng số vật lý ngoài contract không vào JSON. |
 | A12 | Bot dùng cùng luật chuẩn, không chỉnh tuning, không dùng scenario riêng khi chơi. |
+| A13 | Giữ `Q` ≥ 180 ms khi đang chơi thì ngừng gọi `step()` và nhìn từ trên cao; thả `Q` để chơi tiếp. Nạp ánh sáng dùng `E`; headless không đổi. |
 
 ## Sáng tạo của tôi
 
@@ -133,6 +135,8 @@ Phần thêm nằm ngoài lõi hoặc chỉ đọc trạng thái, nên đầu ra
   nhảy/lướt/Bùa Gió/Gió Lạc/Bóng Mực xuất hiện/đếm ngược/thắng/thua.
 - **HUD đầy đủ**: lửa, đồng hồ `mm:ss` đỏ ≤ 30 s, đèn k/n + điểm, thanh 10 ô, hồi chiêu Lướt/Tỏa Sáng,
   nhắc `E — Nạp ánh sáng (x/10)`, mũi tên chỉ đèn ngoài màn hình, nhãn gió và Bùa Gió.
+- **Giữ `Q` để xem từ trên cao**: đồng hồ game đứng yên, camera bay lên 40 m và nhìn thẳng xuống
+  người chơi để đọc bố cục đảo, đèn và Bóng Mực; thả phím là chơi tiếp đúng nhịp cũ.
 - **Chiến dịch 3 Đêm** với menu, màn giới thiệu lời Ông Đăng, màn kết quả từng Đêm, Bình Minh và tổng điểm.
 - **Tạm dừng bằng chuột** (`P`/`Esc`) có Tiếp tục / Chơi lại Đêm / Cài đặt / Về menu; cài đặt âm lượng và
   độ nhạy chuột lưu trong `localStorage`.
@@ -140,8 +144,9 @@ Phần thêm nằm ngoài lõi hoặc chỉ đọc trạng thái, nên đầu ra
 - **Bot chơi tự động** (`npm run bot`) thắng Đêm 1 với số chuẩn và tạo inputs replay được qua CLI.
 
 Ảnh minh họa: `evidence/phase-2/ui/01-menu.png` (menu), `02-intro-night1.png` (giới thiệu),
-`04-night1-lit.png` (Đêm 1), `05-pause.png` (tạm dừng), `06-settings.png` (cài đặt),
-`08-night2-bridge.png` (Đêm 2), `09-night3.png` (Đêm 3), `10-sunrise.png` (Bình Minh).
+`04-night1-lit.png` (Đêm 1), `04b-overview.png` (giữ `E` nhìn từ trên cao), `05-pause.png` (tạm dừng),
+`06-settings.png` (cài đặt), `08-night2-bridge.png` (Đêm 2), `09-night3.png` (Đêm 3),
+`10-sunrise.png` (Bình Minh).
 
 ## Cấu trúc
 

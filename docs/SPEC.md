@@ -65,6 +65,7 @@ Bùa Gió, Gió Lạc, gió mạnh, rơi khỏi đảo và tạm dừng; giữ l
 | A18 | Bóng Mực `spawning` 30 tick, `wander` 2 m/s; recoil 60 tick đẩy 2 m. |
 | A19 | Gió mạnh bắt đầu ở giây 30, 60, …; cảnh báo từ giây 28; hướng RNG mỗi cơn. |
 | A20 | `fall_enabled = true` giữ trong contract; hằng số vật lý ngoài contract không có trong JSON. |
+| A21 | Giữ `Q` ≥ 180 ms khi đang chơi thì renderer ngừng gọi `step()`, đưa camera lên 40 m nhìn xuống; thả `Q` là chơi tiếp. Nạp ánh sáng dùng `E`. Headless không đổi. |
 
 ## Ngoài phạm vi
 
