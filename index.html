@@ -46,6 +46,7 @@
 
         <div id="pause-badge" class="pause-badge" hidden><span id="pause-text">Tạm dừng</span></div>
         <div id="lantern-arrow" class="lantern-arrow" hidden aria-hidden="true"><span>▲</span></div>
+        <div id="shade-arrow" class="lantern-arrow shade-arrow" hidden aria-hidden="true"><span>▲</span></div>
 
         <div id="hint" class="hint"></div>
 
@@ -68,6 +69,7 @@
         </div>
 
         <div class="controls">WASD di chuyển · Chuột nhìn · Space nhảy · Shift lướt · E thắp đèn / châm dầu · F tỏa sáng · Giữ Q nhìn từ trên cao · P/Esc tạm dừng</div>
+        <div id="alert-feed" class="alert-feed" role="status" aria-live="polite"></div>
       </div>
 
       <div id="menu-screen" class="overlay menu-screen">
@@ -174,6 +176,22 @@
               <button class="seg-btn" data-difficulty="medium" type="button">Vừa</button>
               <button class="seg-btn" data-difficulty="hard" type="button">Khó</button>
             </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-copy">
+              <span class="setting-label">Giảm chuyển động</span>
+              <span class="setting-desc">Tắt rung camera và hiệu ứng chớp màn hình</span>
+            </div>
+            <button id="motion-btn" class="btn ghost" type="button" aria-pressed="false">Tắt</button>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-copy">
+              <span class="setting-label">Chữ lớn</span>
+              <span class="setting-desc">Tăng cỡ chữ giao diện thêm 25%</span>
+            </div>
+            <button id="large-text-btn" class="btn ghost" type="button" aria-pressed="false">Tắt</button>
           </div>
 
           <div class="setting-row">

@@ -134,6 +134,7 @@ export interface World {
   update(game: Game, elapsed: number): void;
   pulse(x: number, y: number, z: number, radius: number): void;
   setColorblind(on: boolean): void;
+  setReduceMotion(on: boolean): void;
   dispose(): void;
 }
 
@@ -161,6 +162,7 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
   const ACCENT_DEFAULT = 0x7a3cff;
   const ACCENT_COLORBLIND = 0x00b3ff;
   let colorblind = false;
+  let reduceMotion = false;
   const accentHex = (): number => (colorblind ? ACCENT_COLORBLIND : ACCENT_DEFAULT);
 
   scene.background = SKY_DARK.clone();
@@ -627,7 +629,7 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
         const fuel = game.fuelOf(lantern);
         const ratio = lantern.lit ? Math.max(0, Math.min(1, fuel / TUNING.fuel_max)) : 0;
         const weak = lantern.lit && fuel < TUNING.low_fuel_threshold;
-        const blink = weak ? 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(elapsed * Math.PI * 2)) : 1;
+        const blink = weak ? (reduceMotion ? 0.82 : 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(elapsed * Math.PI * 2))) : 1;
         const target = lantern.lit ? 1 : 0;
         fx.halo.material.opacity += (target * 0.95 * blink - fx.halo.material.opacity) * 0.06;
         fx.offHalo.material.opacity += ((1 - target) * 0.28 - fx.offHalo.material.opacity) * 0.06;
@@ -917,6 +919,10 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
         fx.eyeMat.color.setHex(eye);
         fx.wispMat.color.setHex(accent);
       }
+    },
+
+    setReduceMotion(on: boolean): void {
+      reduceMotion = on;
     },
 
     dispose(): void {

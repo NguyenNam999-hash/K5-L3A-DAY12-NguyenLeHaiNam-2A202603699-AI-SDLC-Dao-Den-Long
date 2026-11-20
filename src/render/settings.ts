@@ -40,12 +40,25 @@ export interface PersistedSettings {
   sound: boolean;
   /** High-contrast palette that never relies on red/violet alone. */
   colorblind: boolean;
+  /** Stops camera shake and damage flashes. */
+  reduceMotion: boolean;
+  /** UI text scale ×1.25. */
+  largeText: boolean;
 }
 
-const STORAGE_KEY = 'dao-den-long.settings.v3';
+const STORAGE_KEY = 'dao-den-long.settings.v4';
+const LEGACY_STORAGE_KEY = 'dao-den-long.settings.v3';
 
 function defaults(): PersistedSettings {
-  return { volume: 0.8, sensitivity: 0.16, difficulty: 'easy', sound: true, colorblind: false };
+  return {
+    volume: 0.8,
+    sensitivity: 0.16,
+    difficulty: 'easy',
+    sound: true,
+    colorblind: false,
+    reduceMotion: false,
+    largeText: false,
+  };
 }
 
 function el<T extends HTMLElement>(selector: string): T {
@@ -65,6 +78,8 @@ export class Settings {
   private readonly sensitivityVal = el<HTMLSpanElement>('#sensitivity-val');
   private readonly soundBtn = el<HTMLButtonElement>('#sound-btn');
   private readonly colorblindBtn = el<HTMLButtonElement>('#colorblind-btn');
+  private readonly motionBtn = el<HTMLButtonElement>('#motion-btn');
+  private readonly largeTextBtn = el<HTMLButtonElement>('#large-text-btn');
   private readonly difficultyDesc = el<HTMLSpanElement>('#difficulty-desc');
   private readonly difficultyButtons = Array.from(
     document.querySelectorAll<HTMLButtonElement>('#difficulty-group .seg-btn'),
@@ -99,6 +114,14 @@ export class Settings {
       this.sync();
       this.onColorblindChange(this.values.colorblind);
     });
+    this.motionBtn.addEventListener('click', () => {
+      this.values.reduceMotion = !this.values.reduceMotion;
+      this.sync();
+    });
+    this.largeTextBtn.addEventListener('click', () => {
+      this.values.largeText = !this.values.largeText;
+      this.sync();
+    });
     for (const button of this.difficultyButtons) {
       button.addEventListener('click', () => {
         const value = button.dataset.difficulty as Difficulty | undefined;
@@ -121,6 +144,7 @@ export class Settings {
   onClose: () => void = () => {};
   onColorblindChange: (on: boolean) => void = () => {};
   onKeybindsChange: () => void = () => {};
+  onReduceMotionChange: (on: boolean) => void = () => {};
 
   keyLabel(action: Action): string {
     return this.keybinds.label(action);
@@ -210,7 +234,7 @@ export class Settings {
 
   private load(): PersistedSettings {
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
+      const raw = window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
       if (!raw) return defaults();
       const parsed = JSON.parse(raw) as Partial<PersistedSettings>;
       const base = defaults();
@@ -226,6 +250,8 @@ export class Settings {
             : base.difficulty,
         sound: typeof parsed.sound === 'boolean' ? parsed.sound : base.sound,
         colorblind: typeof parsed.colorblind === 'boolean' ? parsed.colorblind : base.colorblind,
+        reduceMotion: typeof parsed.reduceMotion === 'boolean' ? parsed.reduceMotion : base.reduceMotion,
+        largeText: typeof parsed.largeText === 'boolean' ? parsed.largeText : base.largeText,
       };
     } catch {
       return defaults();
@@ -249,7 +275,16 @@ export class Settings {
     this.colorblindBtn.textContent = this.values.colorblind ? 'Bật' : 'Tắt';
     this.colorblindBtn.setAttribute('aria-pressed', String(this.values.colorblind));
     this.colorblindBtn.classList.toggle('off', !this.values.colorblind);
+    this.motionBtn.textContent = this.values.reduceMotion ? 'Bật' : 'Tắt';
+    this.motionBtn.setAttribute('aria-pressed', String(this.values.reduceMotion));
+    this.motionBtn.classList.toggle('off', !this.values.reduceMotion);
+    this.largeTextBtn.textContent = this.values.largeText ? 'Bật' : 'Tắt';
+    this.largeTextBtn.setAttribute('aria-pressed', String(this.values.largeText));
+    this.largeTextBtn.classList.toggle('off', !this.values.largeText);
     document.body.classList.toggle('colorblind', this.values.colorblind);
+    document.body.classList.toggle('reduce-motion', this.values.reduceMotion);
+    document.body.classList.toggle('large-text', this.values.largeText);
+    this.onReduceMotionChange(this.values.reduceMotion);
     this.audio.setEnabled(this.values.sound);
     this.audio.setVolume(this.values.volume);
     const spec = DIFFICULTIES[this.values.difficulty];

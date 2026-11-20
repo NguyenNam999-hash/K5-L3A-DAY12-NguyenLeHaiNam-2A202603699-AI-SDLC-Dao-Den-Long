@@ -3,8 +3,9 @@ import * as THREE from 'three';
 import { Game } from '../core/game';
 import { DT, TUNING } from '../core/tuning';
 import { groundHeight, isSolid } from '../core/terrain';
-import type { InputFrame, NightId } from '../core/types';
+import type { InputFrame, NightId, Shade } from '../core/types';
 import { AudioFx } from './audio';
+import { Alerts } from './alerts';
 import { Hud } from './hud';
 import { ACTIONS, formatCode, type Action } from './keybinds';
 import { Minimap } from './minimap';
@@ -33,6 +34,11 @@ const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 700);
 const hud = new Hud();
 const audio = new AudioFx();
 const minimap = new Minimap(minimapCanvas);
+const alerts = new Alerts();
+const alertFeed = document.querySelector<HTMLDivElement>('#alert-feed')!;
+const shadeArrow = document.querySelector<HTMLDivElement>('#shade-arrow')!;
+const lowFuelSeen = new Set<string>();
+let lastAlertKey = '';
 const settings = new Settings(audio);
 settings.onColorblindChange = (on) => world.setColorblind(on);
 
@@ -48,6 +54,14 @@ let currentNight: NightId = 1;
 let game = new Game({ seed: baseSeed, night: 1 });
 let world: World = createWorld(scene, 1);
 world.setColorblind(settings.colorblind);
+world.setReduceMotion(settings.values.reduceMotion);
+settings.onReduceMotionChange = (on) => {
+  world.setReduceMotion(on);
+  if (on) {
+    shake = 0;
+    flashEl.classList.remove('on');
+  }
+};
 let totalScore = 0;
 const nightScores: Record<NightId, number> = { 1: 0, 2: 0, 3: 0 };
 let elapsed = 0;
@@ -154,6 +168,7 @@ function rebuildWorld(night: NightId): void {
   world.dispose();
   world = createWorld(scene, night);
   world.setColorblind(settings.colorblind);
+  world.setReduceMotion(settings.values.reduceMotion);
 }
 
 function toMenu(): void {
@@ -193,6 +208,9 @@ function showIntro(night: NightId): void {
   game = new Game({ seed: baseSeed + night * 7919, night });
   applyDifficulty();
   rebuildWorld(night);
+  alerts.clear();
+  lowFuelSeen.clear();
+  lastAlertKey = '';
   hud.setupNight(night, game.lanterns.length);
   const intro = INTRO[night];
   introEyebrow.textContent = `Đêm ${night} · ${intro.name}`;
@@ -276,6 +294,7 @@ settings.onKeybindsChange = applyKeyLabels;
 applyKeyLabels();
 
 function flash(): void {
+  if (settings.values.reduceMotion) return;
   shake = 0.5;
   flashEl.classList.add('on');
   window.setTimeout(() => flashEl.classList.remove('on'), 70);
@@ -309,6 +328,64 @@ function updateArrow(): void {
   let angle = (Math.atan2(projected.x, projected.y) * 180) / Math.PI;
   if (projected.z > 1) angle = 180;
   hud.setArrow(angle, Math.hypot(target.x - game.px, target.z - game.pz));
+}
+
+const shadeProjected = new THREE.Vector3();
+
+/** Edge arrow toward the nearest shade when it is off screen. */
+function updateShadeArrow(): void {
+  let best: Shade | null = null;
+  let bestD = Number.POSITIVE_INFINITY;
+  for (const shade of game.shades) {
+    const d = Math.hypot(shade.x - game.px, shade.z - game.pz);
+    if (d < bestD) {
+      best = shade;
+      bestD = d;
+    }
+  }
+  if (!best || bestD > 30) {
+    shadeArrow.hidden = true;
+    return;
+  }
+  shadeProjected.set(best.x, best.y + 1, best.z).project(camera);
+  const inside =
+    shadeProjected.z < 1 && Math.abs(shadeProjected.x) < 0.9 && Math.abs(shadeProjected.y) < 0.9;
+  if (inside) {
+    shadeArrow.hidden = true;
+    return;
+  }
+  let angle = (Math.atan2(shadeProjected.x, shadeProjected.y) * 180) / Math.PI;
+  if (shadeProjected.z > 1) angle = 180;
+  shadeArrow.hidden = false;
+  shadeArrow.style.transform = `rotate(${angle}deg)`;
+  shadeArrow.dataset.distance = `${Math.round(bestD)} m`;
+}
+
+function checkLowFuel(): void {
+  for (const lantern of game.lanterns) {
+    const weak = lantern.lit && game.fuelOf(lantern) < TUNING.low_fuel_threshold;
+    if (weak && !lowFuelSeen.has(lantern.id)) {
+      lowFuelSeen.add(lantern.id);
+      alerts.push(`Đèn ${lantern.id} sắp cạn dầu`, 'warn');
+    } else if (!weak && lowFuelSeen.has(lantern.id)) {
+      lowFuelSeen.delete(lantern.id);
+    }
+  }
+}
+
+function renderAlerts(): void {
+  const messages = alerts.active();
+  const key = messages.map((m) => `${m.tone}:${m.text}`).join('|');
+  if (key === lastAlertKey) return;
+  lastAlertKey = key;
+  alertFeed.replaceChildren(
+    ...messages.map((message) => {
+      const line = document.createElement('div');
+      line.className = `alert ${message.tone}`;
+      line.textContent = message.tone === 'warn' ? `⚠ ${message.text}` : message.text;
+      return line;
+    }),
+  );
 }
 
 function handleEvents(): void {
@@ -353,6 +430,7 @@ function handleEvents(): void {
         break;
       case 'shade_spawned':
         audio.shadeSpawn();
+        alerts.push('Bóng Mực xuất hiện', 'warn');
         break;
       case 'game_over':
         audio.result(event.data.result === 'won');
@@ -458,6 +536,7 @@ function frame(now: number): void {
     hud.update(game);
   }
   if ((game.wind.active || game.windWarning) && !windWasActive && !windWarned) audio.wind();
+  if (game.windWarning && !windWarned) alerts.push('Gió sắp thổi', 'warn');
   if (game.windWarning) windWarned = true;
   if (game.wind.active) {
     windWasActive = true;
@@ -471,12 +550,16 @@ function frame(now: number): void {
     if (second <= 10 && second > 0 && second !== lastCountdownSecond) {
       lastCountdownSecond = second;
       audio.countdown();
+      if (second === 10) alerts.push('Còn 10 giây', 'warn');
     }
   }
   updateCamera(dt);
   if (phase === 'playing' || phase === 'paused') {
     minimap.update(game, yawDeg);
     updateArrow();
+    updateShadeArrow();
+    if (phase === 'playing') checkLowFuel();
+    renderAlerts();
   }
   renderer.render(scene, camera);
 
