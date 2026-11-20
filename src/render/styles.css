@@ -751,3 +751,28 @@ input[type='range'] {
     bottom: 170px;
   }
 }
+
+/* ------------------------------------------------------- Phase 3: fuel & a11y */
+
+.pip.lantern.weak {
+  background: var(--danger);
+  border-color: var(--core);
+  animation: blink 1s steps(2, end) infinite;
+}
+
+body.colorblind {
+  --danger: #ffffff;
+}
+
+body.colorblind .timer.low::before {
+  content: '⚠ ';
+}
+
+body.colorblind #flash {
+  background: radial-gradient(circle at 50% 55%, rgba(255, 255, 255, 0.34), transparent 65%);
+}
+
+body.colorblind .pip.lantern:not(.on) {
+  border-style: dashed;
+  opacity: 0.6;
+}

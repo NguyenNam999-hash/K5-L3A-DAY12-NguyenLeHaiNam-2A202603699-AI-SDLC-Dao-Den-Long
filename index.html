@@ -24,7 +24,7 @@
           </div>
 
           <div class="timer-wrap">
-            <div id="timer" class="timer">05:00</div>
+            <div id="timer" class="timer">04:00</div>
             <div id="wind-tag" class="wind-tag" hidden>Gió mạnh</div>
           </div>
 
@@ -67,22 +67,22 @@
           </div>
         </div>
 
-        <div class="controls">WASD di chuyển · Chuột nhìn · Space nhảy · Shift lướt · E nạp đèn · F tỏa sáng · Giữ Q nhìn từ trên cao · P/Esc tạm dừng</div>
+        <div class="controls">WASD di chuyển · Chuột nhìn · Space nhảy · Shift lướt · E thắp đèn / châm dầu · F tỏa sáng · Giữ Q nhìn từ trên cao · P/Esc tạm dừng</div>
       </div>
 
       <div id="menu-screen" class="overlay menu-screen">
         <div class="card start-card">
-          <p class="eyebrow">Đảo Đèn Lồng · Ba hòn đảo</p>
-          <h1>Ba ngọn đèn, ba hòn đảo</h1>
+          <p class="eyebrow">Đảo Đèn Lồng · Đèn cạn dầu</p>
+          <h1>Giữ đảo sáng tới bình minh</h1>
           <p class="story">
             Sương đen đã nuốt ánh sáng của ba hòn đảo. Mây — người giữ đèn nhỏ tuổi — phải đi qua Đảo Bến,
-            Đảo Cau và Đảo Chuông, gom đom đóm và thắp lại từng ngọn Đèn Lồng Lớn trước khi đêm tan.
+            Đảo Cau và Đảo Chuông, gom đom đóm, thắp đèn và châm dầu để giữ đủ đèn còn cháy khi trời sáng.
           </p>
           <ul class="rules">
-            <li>Ba Đêm nối tiếp. Thắng cả ba để thấy bình minh.</li>
-            <li>Đom đóm nhặt tự động; nạp đủ 10 vào một đèn để thắp.</li>
-            <li><kbd>Shift</kbd> lướt, <kbd>Space</kbd> nhảy, <kbd>F</kbd> tỏa sáng.</li>
-            <li>Bùa Gió cho tốc độ và lướt không hồi chiêu.</li>
+            <li>Ba Đêm nối tiếp. Mỗi đêm cần 60% số đèn còn sáng lúc bình minh.</li>
+            <li>Đèn cháy 100 giây rồi cạn dầu. Bóng Mực hút dầu đèn yếu.</li>
+            <li><kbd>E</kbd> thắp đèn / châm dầu · <kbd>Shift</kbd> lướt · <kbd>Space</kbd> nhảy · <kbd>F</kbd> tỏa sáng.</li>
+            <li>Thắp đèn thành công tăng sức chứa lên tối đa 20 đom đóm.</li>
           </ul>
           <div class="button-row">
             <button id="campaign-btn" class="btn primary" type="button">Bắt đầu hành trình</button>
@@ -115,8 +115,8 @@
           </div>
           <ul class="rules compact">
             <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> di chuyển · <kbd>Space</kbd> nhảy · <kbd>Shift</kbd> lướt</li>
-            <li><kbd>E</kbd> nạp đèn · <kbd>F</kbd> tỏa sáng · <kbd>M</kbd> tắt âm thanh</li>
-            <li>Bóng Mực sợ vùng sáng quanh đèn đã thắp. Gió Lạc cướp đom đóm khi bạn mang nhiều.</li>
+            <li><kbd>E</kbd> thắp đèn / châm dầu · <kbd>F</kbd> tỏa sáng · <kbd>M</kbd> tắt âm thanh</li>
+            <li>Bóng Mực hút dầu đèn dưới 30. Đèn cạn dầu tắt và mất vùng an toàn.</li>
           </ul>
         </div>
       </div>
@@ -154,6 +154,14 @@
               <span class="setting-desc">Tắt toàn bộ tiếng</span>
             </div>
             <button id="sound-btn" class="btn ghost" type="button" aria-pressed="true">Bật</button>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-copy">
+              <span class="setting-label">Bảng màu dễ phân biệt</span>
+              <span class="setting-desc">Bóng Mực xanh lam, cảnh báo trắng kèm ⚠, đèn tắt xẹp và có giấy rách</span>
+            </div>
+            <button id="colorblind-btn" class="btn ghost" type="button" aria-pressed="false">Tắt</button>
           </div>
 
           <div class="setting-row">

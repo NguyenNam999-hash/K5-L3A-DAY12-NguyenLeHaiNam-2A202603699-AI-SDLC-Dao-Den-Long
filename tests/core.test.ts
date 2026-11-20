@@ -12,12 +12,15 @@ describe('setup', () => {
     expect(snap.tick).toBe(0);
     expect(snap.sim_tick).toBe(0);
     expect(snap.state).toBe('playing');
-    expect(snap.time_left_s).toBe(300);
+    expect(snap.time_left_s).toBe(240);
     expect(snap.player.pos).toEqual([0, 0, 0]);
     expect(snap.player.flames).toBe(3);
     expect(snap.player.carried).toBe(0);
+    expect(snap.player.capacity).toBe(10);
     expect(snap.player.grounded).toBe(true);
     expect(snap.lanterns).toHaveLength(5);
+    expect(snap.lanterns.every((l) => l.lit === false && l.fuel === 0 && l.ever_lit === false)).toBe(true);
+    expect(snap.lanterns.every((l) => l.relit_count === 0)).toBe(true);
     expect(snap.motes).toHaveLength(20);
     expect(new Set(snap.motes.map((m) => `${m.pos[0]},${m.pos[2]}`)).size).toBe(20);
     expect(snap.motes.every((m) => m.kind === 'random')).toBe(true);
@@ -28,21 +31,23 @@ describe('setup', () => {
   it('starts Night 2 and Night 3 with their own durations and lantern counts', () => {
     expect(new Game({ seed: 1, night: 2 }).snapshot()).toMatchObject({
       night: 2,
-      time_left_s: 330,
+      time_left_s: 270,
     });
     expect(new Game({ seed: 1, night: 2 }).snapshot().lanterns).toHaveLength(6);
-    expect(new Game({ seed: 1, night: 3 }).snapshot().time_left_s).toBe(360);
+    expect(new Game({ seed: 1, night: 3 }).snapshot().time_left_s).toBe(300);
     expect(new Game({ seed: 1, night: 3 }).snapshot().lanterns).toHaveLength(7);
   });
 
   it('pre-lit scenario lanterns give no score and no events', () => {
-    const { game, events } = simulate({
+    const { game, events, snapshots } = simulate({
       ticks: 5,
       scenario: { ...still, lanterns: [{ id: 'L1', lit: true, deposited: 10 }] },
     });
     expect(eventNames(events)).toEqual(['night_start']);
     expect(game.score).toBe(0);
     expect(game.lanterns[0]!.lit).toBe(true);
+    expect(snapshots[0]!.lanterns[0]!.fuel).toBe(100);
+    expect(snapshots[0]!.lanterns[0]!.ever_lit).toBe(true);
   });
 });
 
@@ -244,7 +249,7 @@ describe('motes and lanterns', () => {
     expect(game.carried).toBe(10);
   });
 
-  it('scores 10 per deposited mote and 100 for the lantern', () => {
+  it('scores 5 per deposited mote and 100 for the first light', () => {
     const { game, events } = simulate({
       ticks: 3,
       scenario: {
@@ -256,9 +261,11 @@ describe('motes and lanterns', () => {
     });
     expect(eventNames(events)).toEqual(['night_start', 'deposit', 'lantern_lit']);
     expect(events[1]!.data).toEqual({ lantern_id: 'L1', amount: 10, deposited: 10 });
+    expect(events[2]!.data).toEqual({ lantern_id: 'L1', relight: false });
     expect(game.carried).toBe(0);
-    expect(game.score).toBe(200);
+    expect(game.score).toBe(150);
     expect(game.stats.motes).toBe(10);
+    expect(game.lanterns[0]!.fuel60).toBeGreaterThan(5990);
   });
 
   it('deposits only what is missing and keeps the rest', () => {
@@ -273,7 +280,7 @@ describe('motes and lanterns', () => {
     });
     expect(events[1]!.data).toEqual({ lantern_id: 'L1', amount: 3, deposited: 10 });
     expect(game.carried).toBe(3);
-    expect(game.score).toBe(130);
+    expect(game.score).toBe(115);
   });
 
   it('ignores lanterns outside the 3D interact radius', () => {
@@ -468,6 +475,200 @@ describe('shades', () => {
   });
 });
 
+describe('lantern fuel (v1.2)', () => {
+  it('burns 1 fuel per second and reports one decimal', () => {
+    const { game, snapshots } = simulate({
+      ticks: 60,
+      scenario: { ...still, lanterns: [{ id: 'L1', lit: true }] },
+    });
+    expect(game.fuelOf(game.lanterns[0]!)).toBeCloseTo(99, 6);
+    expect(snapshots[60]!.lanterns[0]!.fuel).toBe(99);
+  });
+
+  it('refuels a lit lantern with ceil((100 - fuel) / 10) motes', () => {
+    const { game, events } = simulate({
+      ticks: 3,
+      scenario: {
+        ...still,
+        player: { pos: [0, 0, 1], carried: 10 },
+        lanterns: [{ id: 'L1', pos: [0, 0, 0], lit: true, fuel: 50 }],
+      },
+      frames: [{ tick: 0, interact: true }, { tick: 1, interact: false }],
+    });
+    const refuel = events.find((e) => e.name === 'refuel');
+    expect(refuel!.data).toMatchObject({ lantern_id: 'L1', amount: 6, fuel: 100 });
+    expect(game.carried).toBe(4);
+    expect(game.score).toBe(6 * TUNING.score.per_mote);
+    expect(game.fuelOf(game.lanterns[0]!)).toBeGreaterThan(99.9);
+  });
+
+  it('rounds a partial refuel up to one mote', () => {
+    const { game, events } = simulate({
+      ticks: 2,
+      scenario: {
+        ...still,
+        player: { pos: [0, 0, 1], carried: 10 },
+        lanterns: [{ id: 'L1', pos: [0, 0, 0], lit: true, fuel: 95.5 }],
+      },
+      frames: [{ tick: 0, interact: true }, { tick: 1, interact: false }],
+    });
+    expect(events.find((e) => e.name === 'refuel')!.data).toMatchObject({ amount: 1 });
+    expect(game.carried).toBe(9);
+  });
+
+  it('relights a previously lit lantern for 5 motes and +40', () => {
+    const { game, events } = simulate({
+      ticks: 3,
+      scenario: {
+        ...still,
+        player: { pos: [0, 0, 1], carried: 5 },
+        lanterns: [{ id: 'L1', pos: [0, 0, 0], ever_lit: true }],
+      },
+      frames: [{ tick: 0, interact: true }, { tick: 1, interact: false }],
+    });
+    expect(eventNames(events)).toEqual(['night_start', 'deposit', 'lantern_lit']);
+    expect(events[1]!.data).toEqual({ lantern_id: 'L1', amount: 5, deposited: 5 });
+    expect(events[2]!.data).toEqual({ lantern_id: 'L1', relight: true });
+    expect(game.score).toBe(5 * TUNING.score.per_mote + TUNING.score.per_relight);
+    expect(game.lanterns[0]!.relitCount).toBe(1);
+    expect(game.lanterns[0]!.lit).toBe(true);
+  });
+
+  it('turns a lantern off at fuel 0, resets progress and emits lantern_out', () => {
+    const { game, events } = simulate({
+      ticks: 10,
+      scenario: { ...still, lanterns: [{ id: 'L1', lit: true, fuel: 0.1, deposited: 5 }] },
+    });
+    expect(eventNames(events)).toContain('lantern_out');
+    const out = events.find((e) => e.name === 'lantern_out')!;
+    expect(out.data).toEqual({ lantern_id: 'L1' });
+    expect(game.lanterns[0]!.lit).toBe(false);
+    expect(game.lanterns[0]!.fuel60).toBe(0);
+    expect(game.lanterns[0]!.deposited).toBe(0);
+    expect(game.lanterns[0]!.everLit).toBe(true);
+  });
+
+  it('gives a weak lit lantern no safe zone but keeps it at exactly 30', () => {
+    const weak = simulate({
+      ticks: 5,
+      scenario: {
+        ...still,
+        player: { pos: [20, 0, 20] },
+        lanterns: [{ id: 'L1', pos: [0, 0, 0], lit: true, fuel: 20 }],
+        shades: [{ pos: [1, 0, 0], state: 'wander' }],
+      },
+    });
+    expect(Math.hypot(weak.game.shades[0]!.x, weak.game.shades[0]!.z)).toBeLessThan(6);
+    const edge = simulate({
+      ticks: 1,
+      scenario: {
+        ...still,
+        player: { pos: [20, 0, 20] },
+        lanterns: [{ id: 'L1', pos: [0, 0, 0], lit: true, fuel: 30 }],
+        shades: [{ pos: [1, 0, 0], state: 'wander' }],
+      },
+    });
+    const start = edge.snapshots[0]!.shades[0]!;
+    expect(Math.hypot(start.pos[0], start.pos[2])).toBeGreaterThanOrEqual(6);
+  });
+
+  it('grows capacity by 2 per successful light up to 20', () => {
+    const first = simulate({
+      ticks: 3,
+      scenario: {
+        ...still,
+        player: { pos: [0, 0, 1], carried: 10 },
+        lanterns: [{ id: 'L1', pos: [0, 0, 0] }],
+      },
+      frames: [{ tick: 0, interact: true }, { tick: 1, interact: false }],
+    });
+    expect(first.game.capacity).toBe(12);
+    expect(first.snapshots.at(-1)!.player.capacity).toBe(12);
+    expect(new Game({ seed: 1, scenario: { ...still, player: { successful_lights: 10 } } }).capacity).toBe(20);
+  });
+
+  it('pre-lit scenario lanterns do not grow capacity', () => {
+    const { game } = simulate({
+      ticks: 2,
+      scenario: { ...still, lanterns: [{ id: 'L1', lit: true }] },
+    });
+    expect(game.successfulLights).toBe(0);
+    expect(game.capacity).toBe(10);
+  });
+});
+
+describe('shade drain (v1.2)', () => {
+  it('wanders to the nearest weak lantern, drains 5/s and logs every 60 ticks', () => {
+    const { game, events } = simulate({
+      ticks: 120,
+      scenario: {
+        ...still,
+        player: { pos: [20, 0, 20] },
+        lanterns: [
+          { id: 'L1', pos: [0, 0, 0], lit: true, fuel: 25 },
+          { id: 'L2', pos: [8, 0, 0], lit: true, fuel: 80 },
+        ],
+        shades: [{ id: 'S1', pos: [0, 0, 1.5], state: 'wander' }],
+      },
+    });
+    expect(game.shades[0]!.state).toBe('drain');
+    expect(game.shades[0]!.targetLanternId).toBe('L1');
+    const drains = events.filter((e) => e.name === 'fuel_drain');
+    expect(drains).toHaveLength(2);
+    expect(drains[0]!.data).toMatchObject({ lantern_id: 'L1', shade_id: 'S1' });
+    expect(Number(drains[0]!.data.fuel)).toBeCloseTo(19.1, 1);
+    expect(game.fuelOf(game.lanterns[0]!)).toBeCloseTo(13.1, 1);
+    expect(game.fuelOf(game.lanterns[1]!)).toBeCloseTo(78, 1);
+  });
+
+  it('switches to chase when Mây comes within 6 m', () => {
+    const { game } = simulate({
+      ticks: 2,
+      scenario: {
+        ...still,
+        player: { pos: [4, 0, 0] },
+        lanterns: [{ id: 'L1', pos: [0, 0, 0], lit: true, fuel: 20 }],
+        shades: [{ id: 'S1', pos: [0, 0, 1.5], state: 'drain', target_lantern_id: 'L1' }],
+      },
+    });
+    expect(game.shades[0]!.state).toBe('chase');
+  });
+
+  it('returns to wander when the lantern runs out', () => {
+    const { game, events } = simulate({
+      ticks: 20,
+      scenario: {
+        ...still,
+        player: { pos: [20, 0, 20] },
+        lanterns: [{ id: 'L1', pos: [0, 0, 0], lit: true, fuel: 0.2 }],
+        shades: [{ id: 'S1', pos: [0, 0, 1.5], state: 'drain', target_lantern_id: 'L1' }],
+      },
+    });
+    expect(events.some((e) => e.name === 'lantern_out')).toBe(true);
+    expect(game.lanterns[0]!.lit).toBe(false);
+    expect(game.shades[0]!.state).not.toBe('drain');
+    expect(game.shades[0]!.targetLanternId).toBeUndefined();
+  });
+
+  it('pulse on a draining shade pays +5 and +15', () => {
+    const { game, events } = simulate({
+      ticks: 2,
+      scenario: {
+        ...still,
+        player: { carried: 3 },
+        lanterns: [{ id: 'L1', pos: [0, 0, 2], lit: true, fuel: 20 }],
+        shades: [{ id: 'S1', pos: [0, 0, 1.5], state: 'drain', target_lantern_id: 'L1' }],
+      },
+      frames: [{ tick: 0, pulse: true }, { tick: 1, pulse: false }],
+    });
+    expect(events.find((e) => e.name === 'pulse')!.data).toEqual({ stunned_ids: ['S1'] });
+    expect(game.score).toBe(TUNING.score.per_stun + TUNING.score.per_drain_stun);
+    expect(game.stats.drainStuns).toBe(1);
+    expect(game.shades[0]!.state).toBe('stunned');
+  });
+});
+
+
 describe('drifters, charms and wind', () => {
   it('spawns a drifter at tick 1200 on Night 2', () => {
     const { snapshots } = simulate({ ticks: 1200, night: 2, scenario: { random_motes: false, random_shades: false } });
@@ -577,45 +778,68 @@ describe('drifters, charms and wind', () => {
 });
 
 describe('ending and scoring', () => {
-  it('loses at dawn and gives no bonus', () => {
-    const { game, events } = simulate({ ticks: 60, scenario: { ...still, time_left_s: 0.5 } });
+  it('loses at dawn when too few lanterns are lit, with no bonus', () => {
+    const { game, events } = simulate({
+      ticks: 60,
+      scenario: {
+        ...still,
+        time_left_s: 0.5,
+        lanterns: [
+          { id: 'L1', lit: true },
+          { id: 'L2', lit: true },
+          { id: 'L3' },
+          { id: 'L4' },
+          { id: 'L5' },
+        ],
+      },
+    });
     expect(game.state).toBe('lost');
     expect(game.tick).toBe(30);
     expect(game.score).toBe(0);
     expect(events.at(-1)!.data).toEqual({ result: 'lost', reason: 'dawn' });
   });
 
-  it('wins when the last lantern lights, with floor(time) * 2 + 50 per flame', () => {
+  it('does not win early when every lantern is lit', () => {
     const scenario: Scenario = {
       ...still,
-      player: { carried: 1 },
-      lanterns: [
-        { id: 'L1', pos: [0, 0, 0], deposited: 9 },
-        { id: 'L2', lit: true },
-        { id: 'L3', lit: true },
-        { id: 'L4', lit: true },
-        { id: 'L5', lit: true },
-      ],
+      lanterns: ['L1', 'L2', 'L3', 'L4', 'L5'].map((id) => ({ id, lit: true })),
     };
-    const { game, events } = simulate({
-      ticks: 5,
-      scenario,
-      frames: [{ tick: 0, interact: true }, { tick: 1, interact: false }],
-    });
-    expect(game.state).toBe('won');
-    expect(events.at(-1)!.data).toEqual({ result: 'won', reason: 'all_lit' });
-    expect(game.score).toBe(10 + 100 + Math.floor(game.timeLeft()) * 2 + 150);
+    const { game } = simulate({ ticks: 5, scenario });
+    expect(game.state).toBe('playing');
+    expect(game.litCount()).toBe(5);
   });
 
-  it('wins at the deadline when every lantern is already lit', () => {
+  it('wins at dawn when 60% of the lanterns are still lit, paying fuel and flames', () => {
     const scenario: Scenario = {
       ...still,
       time_left_s: 0.5,
       lanterns: ['L1', 'L2', 'L3', 'L4', 'L5'].map((id) => ({ id, lit: true })),
     };
-    const { game } = simulate({ ticks: 60, scenario });
+    const { game, events } = simulate({ ticks: 60, scenario });
     expect(game.state).toBe('won');
-    expect(game.score).toBe(150);
+    expect(events.at(-1)!.data).toEqual({ result: 'won', reason: 'dawn_survived' });
+    const dawnBonus = game.lanterns.reduce((sum, l) => sum + 50 + Math.floor(game.fuelOf(l)), 0);
+    expect(game.score).toBe(dawnBonus + game.flames * 50);
+    expect(game.score).toBe(895);
+  });
+
+  it('wins with exactly ceil(0.6 x 5) = 3 lanterns and scores each lit lantern', () => {
+    const scenario: Scenario = {
+      ...still,
+      time_left_s: 0.5,
+      lanterns: [
+        { id: 'L1', lit: true, fuel: 40 },
+        { id: 'L2', lit: true, fuel: 40 },
+        { id: 'L3', lit: true, fuel: 40 },
+        { id: 'L4' },
+        { id: 'L5' },
+      ],
+    };
+    const { game, events } = simulate({ ticks: 60, scenario });
+    expect(game.state).toBe('won');
+    expect(events.at(-1)!.data).toEqual({ result: 'won', reason: 'dawn_survived' });
+    // 39.5 fuel each after 30 ticks: 50 + floor(39.5) = 89, x3 lanterns, + 150 flames.
+    expect(game.score).toBe(89 * 3 + 150);
   });
 });
 

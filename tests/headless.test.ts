@@ -87,7 +87,7 @@ describe('headless CLI', () => {
     }
     const two = join(dir, 'night-2-time.jsonl');
     runHeadless(['--seed', '1', '--night', '2', '--ticks', '1', '--out', two]);
-    expect(readJsonl(two)[0]!.time_left_s).toBe(330);
+    expect(readJsonl(two)[0]!.time_left_s).toBe(270);
   });
 
   it('freezes sim_tick while paused', () => {
@@ -138,8 +138,8 @@ describe('headless CLI', () => {
     const out = join(dir, 'round.jsonl');
     runHeadless(['--seed', '5', '--night', '1', '--ticks', '1', '--out', out, '--snapshot-every', '1']);
     const snap = readJsonl(out)[0] as unknown as {
-      player: { pos: number[]; vel: number[] };
-      lanterns: Array<{ pos: number[] }>;
+      player: { pos: number[]; vel: number[]; capacity: number };
+      lanterns: Array<{ pos: number[]; fuel: number; ever_lit: boolean; relit_count: number }>;
       motes: Array<{ pos: number[]; kind: string; ttl_s: number }>;
       drifters: unknown[];
       charms: unknown[];
@@ -147,7 +147,11 @@ describe('headless CLI', () => {
     };
     expect(snap.player.pos).toEqual([0, 0, 0]);
     expect(snap.player.vel).toEqual([0, 0, 0]);
+    expect(snap.player.capacity).toBe(10);
     expect(snap.lanterns[0]!.pos[1]).toBe(0);
+    expect(snap.lanterns[0]!.fuel).toBe(0);
+    expect(snap.lanterns[0]!.ever_lit).toBe(false);
+    expect(snap.lanterns[0]!.relit_count).toBe(0);
     expect(snap.motes[0]!.pos[1]).toBe(0);
     expect(snap.motes[0]!.kind).toBe('random');
     expect(snap.drifters).toEqual([]);

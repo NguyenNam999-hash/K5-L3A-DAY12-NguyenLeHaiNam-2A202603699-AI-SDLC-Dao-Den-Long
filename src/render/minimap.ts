@@ -85,9 +85,9 @@ export class Minimap {
       ctx.fill();
     }
 
-    // Safe circles around lit lanterns.
+    // Safe circles only around lanterns with enough fuel.
     for (const lantern of game.lanterns) {
-      if (!lantern.lit) continue;
+      if (!lantern.lit || game.fuelOf(lantern) < TUNING.low_fuel_threshold) continue;
       ctx.beginPath();
       ctx.arc(toX(lantern.x), toY(lantern.z), Math.max(3, TUNING.safe_radius * scale), 0, TAU);
       ctx.fillStyle = 'rgba(255, 179, 71, 0.12)';
@@ -140,13 +140,23 @@ export class Minimap {
     for (const lantern of game.lanterns) {
       const x = toX(lantern.x);
       const y = toY(lantern.z);
-      ctx.beginPath();
-      ctx.arc(x, y, lantern.lit ? 3.4 : 2.6, 0, TAU);
-      ctx.fillStyle = lantern.lit ? '#ffb347' : 'rgba(255, 210, 150, 0.3)';
-      ctx.fill();
+      const fuel = game.fuelOf(lantern);
       if (lantern.lit) {
-        ctx.strokeStyle = 'rgba(255, 220, 160, 0.7)';
-        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y, 3.4, 0, TAU);
+        ctx.fillStyle = fuel < TUNING.low_fuel_threshold ? 'rgba(255, 122, 77, 0.9)' : '#ffb347';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x, y, 4.8, -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(0, Math.min(1, fuel / TUNING.fuel_max)));
+        ctx.strokeStyle = 'rgba(255, 220, 160, 0.8)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      } else {
+        // Hollow ring: an off lantern stays recognisable without colour.
+        ctx.beginPath();
+        ctx.arc(x, y, 2.8, 0, TAU);
+        ctx.strokeStyle = lantern.everLit ? 'rgba(255, 210, 150, 0.55)' : 'rgba(255, 210, 150, 0.3)';
+        ctx.lineWidth = 1.2;
         ctx.stroke();
       }
     }

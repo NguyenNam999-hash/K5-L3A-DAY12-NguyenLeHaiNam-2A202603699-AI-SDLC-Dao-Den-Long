@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Contract verification for Phase 2 (Contract v1.1). Runs the built headless CLI on
+ * Contract verification for Phase 3 (Contract v1.2). Runs the built headless CLI on
  * fixed scenarios and checks output shape, rules, determinism and performance.
  *
  * Usage: npm run build && node scripts/verify.mjs
@@ -10,7 +10,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.cwd();
-const outDir = join(root, 'evidence/phase-2/headless');
+const outDir = join(root, 'evidence/phase-3/headless');
 mkdirSync(outDir, { recursive: true });
 
 const CLI = 'dist-node/headless/main.js';
@@ -57,7 +57,7 @@ function round3(value) {
   return Math.abs(value * 1000 - Math.round(value * 1000)) < 1e-6;
 }
 
-const SHADE_STATES = ['spawning', 'wander', 'chase', 'recoil', 'stunned'];
+const SHADE_STATES = ['spawning', 'wander', 'chase', 'recoil', 'stunned', 'drain'];
 const DRIFTER_STATES = ['idle', 'chase', 'flee', 'removed'];
 const STATE_NAMES = ['playing', 'paused', 'won', 'lost'];
 const LANTERNS = { 1: 5, 2: 6, 3: 7 };
@@ -93,8 +93,16 @@ function validateShape(testCase, records) {
       check(Array.isArray(snap.player[key]) && snap.player[key].length === 3, label, `player.${key} must be xyz`);
     }
     check(typeof snap.player.grounded === 'boolean', label, 'player.grounded missing');
+    check(Number.isInteger(snap.player.capacity) && snap.player.capacity >= 10 && snap.player.capacity <= 20, label, 'player.capacity out of range');
     for (const key of ['invuln', 'dash_cd_s', 'pulse_cd_s', 'charm_s']) {
       check(typeof snap.player[key] === 'number', label, `player.${key} missing`);
+    }
+    for (const lantern of snap.lanterns) {
+      check(typeof lantern.fuel === 'number' && lantern.fuel >= 0 && lantern.fuel <= 100, label, `bad lantern fuel ${lantern.fuel}`);
+      check(Math.abs(lantern.fuel * 10 - Math.round(lantern.fuel * 10)) < 1e-6, label, `fuel not rounded to 1 decimal: ${lantern.fuel}`);
+      check(typeof lantern.ever_lit === 'boolean', label, 'lantern.ever_lit missing');
+      check(Number.isInteger(lantern.relit_count) && lantern.relit_count >= 0, label, 'lantern.relit_count missing');
+      check(lantern.lit || lantern.fuel === 0, label, 'an unlit lantern must expose fuel 0');
     }
     const positions = [
       snap.player.pos,
@@ -161,7 +169,8 @@ const definitions = [
     check(deposit && deposit.tick === 1, '03-deposit', 'deposit must happen at tick 1');
     check(deposit.data.amount === 10 && deposit.data.deposited === 10, '03-deposit', 'deposit payload wrong');
     check(snapshots.at(-1).lanterns[0].lit === true, '03-deposit', 'L1 must be lit');
-    check(snapshots.at(-1).score === 200, '03-deposit', '10 motes + lantern must score 200');
+    check(snapshots.at(-1).lanterns[0].fuel === 100, '03-deposit', 'a new light must start at fuel 100');
+    check(snapshots.at(-1).score === 150, '03-deposit', '10 motes + first light must score 150');
   } },
   { name: '04-pulse', scenario: '04-pulse.json', inputs: '04-pulse.inputs.json', ticks: 3, snapshotEvery: 3, verify({ events, snapshots }) {
     const pulse = events.find((event) => event.name === 'pulse');
@@ -178,12 +187,12 @@ const definitions = [
     check(snapshots.at(-1).player.carried === 5, '05-hit', 'must drop floor(10/2)');
     check(snapshots.at(-1).motes.filter((m) => m.kind === 'dropped').length === 5, '05-hit', 'dropped motes missing');
   } },
-  { name: '06-win', scenario: '06-win.json', inputs: '06-win.inputs.json', ticks: 5, snapshotEvery: 5, verify({ events, records }) {
+  { name: '06-win', scenario: '06-win.json', ticks: 120, snapshotEvery: 60, verify({ events, records }) {
     const end = records.at(-1);
     check(end.state === 'won', '06-win', `state must be won, got ${end.state}`);
-    check(end.score === 858, '06-win', `score must be 858, got ${end.score}`);
+    check(end.score === 597, '06-win', `score must be 597, got ${end.score}`);
     const over = events.find((event) => event.name === 'game_over');
-    check(over && over.data.reason === 'all_lit', '06-win', 'game_over payload wrong');
+    check(over && over.data.reason === 'dawn_survived', '06-win', 'game_over reason must be dawn_survived');
   } },
   { name: '07-dawn', scenario: '07-dawn.json', ticks: 120, verify({ events, records }) {
     const end = records.at(-1);
@@ -259,6 +268,41 @@ const definitions = [
     const last = snapshots.at(-1);
     check(last.player.grounded === true && last.player.pos[1] === 6, '21-night3-pad', 'pad must land on tier 2');
   } },
+  { name: '25-refuel', scenario: '25-refuel.json', inputs: '25-refuel.inputs.json', ticks: 3, snapshotEvery: 3, verify({ events, snapshots }) {
+    const refuel = events.find((event) => event.name === 'refuel');
+    check(Boolean(refuel), '25-refuel', 'refuel event missing');
+    if (refuel) check(refuel.data.amount === 6 && refuel.data.fuel === 100, '25-refuel', 'refuel payload wrong');
+    check(snapshots.at(-1).player.carried === 4, '25-refuel', 'carried must drop by 6');
+    check(snapshots.at(-1).score === 30, '25-refuel', '6 motes must score 30');
+    check(snapshots.at(-1).lanterns[0].fuel === 100, '25-refuel', 'fuel must cap at 100');
+  } },
+  { name: '26-lantern-out', scenario: '26-lantern-out.json', ticks: 120, snapshotEvery: 30, verify({ events, snapshots }) {
+    const out = events.find((event) => event.name === 'lantern_out');
+    check(Boolean(out), '26-lantern-out', 'lantern_out missing');
+    if (out) check(out.data.lantern_id === 'L1' && out.tick === 90, '26-lantern-out', `lantern_out payload/tick wrong: ${JSON.stringify(out)}`);
+    const last = snapshots.at(-1).lanterns[0];
+    check(last.lit === false && last.fuel === 0 && last.ever_lit === true, '26-lantern-out', 'lantern must be off, empty and remembered');
+  } },
+  { name: '27-drain', scenario: '27-drain.json', ticks: 180, snapshotEvery: 60, verify({ events, snapshots }) {
+    const drains = events.filter((event) => event.name === 'fuel_drain');
+    check(drains.length === 3, '27-drain', `must log every 60 ticks, got ${drains.length}`);
+    if (drains[0]) check(drains[0].data.lantern_id === 'L1' && drains[0].data.shade_id === 'S1', '27-drain', 'fuel_drain payload wrong');
+    const last = snapshots.at(-1);
+    check(last.shades[0].state === 'drain', '27-drain', 'shade must be draining');
+    check(last.lanterns[0].fuel < 15, '27-drain', `weak lantern must lose fuel fast, got ${last.lanterns[0].fuel}`);
+    check(last.lanterns[1].fuel > 75, '27-drain', 'healthy lantern must only lose 1/s');
+  } },
+  { name: '28-relight', scenario: '28-relight.json', inputs: '28-relight.inputs.json', ticks: 3, snapshotEvery: 3, verify({ events, snapshots }) {
+    const lit = events.find((event) => event.name === 'lantern_lit');
+    check(Boolean(lit) && lit.data.relight === true, '28-relight', 'lantern_lit must carry relight:true');
+    check(events.find((event) => event.name === 'deposit').data.amount === 5, '28-relight', 'a relight costs 5 motes');
+    check(snapshots.at(-1).score === 65, '28-relight', `relight must score 65, got ${snapshots.at(-1).score}`);
+    check(snapshots.at(-1).lanterns[0].relit_count === 1, '28-relight', 'relit_count must be 1');
+  } },
+  { name: '29-capacity', scenario: '29-capacity.json', ticks: 1, snapshotEvery: 1, verify({ snapshots }) {
+    check(snapshots.at(-1).player.capacity === 20, '29-capacity', 'capacity must cap at 20');
+    check(snapshots.at(-1).player.carried === 19, '29-capacity', '19 carried must fit in 20');
+  } },
 ];
 
 for (const testCase of definitions) {
@@ -306,10 +350,10 @@ const noDrift = idleSnaps.every((snap) => snap.player.pos[0] === 0 && snap.playe
 check(noDrift, '23-idle', 'player moved without input');
 console.log(noDrift ? 'PASS 23-idle' : 'FAIL 23-idle');
 
-// Performance: a full Night 3 (21 600 ticks) must finish in <= 30 s.
+// Performance: a full Night 3 (18 000 ticks) must finish in <= 30 s.
 const perfOut = join(outDir, '24-full-night3.jsonl');
 const startedAt = Date.now();
-const perf = spawnSync('node', [CLI, '--seed', '5', '--night', '3', '--ticks', '21600', '--out', perfOut], {
+const perf = spawnSync('node', [CLI, '--seed', '5', '--night', '3', '--ticks', '18000', '--out', perfOut], {
   encoding: 'utf8',
 });
 const elapsedMs = Date.now() - startedAt;
@@ -318,7 +362,7 @@ check(elapsedMs <= 30000, '24-performance', `full night took ${elapsedMs} ms`);
 console.log(elapsedMs <= 30000 ? `PASS 24-performance (${elapsedMs} ms)` : `FAIL 24-performance (${elapsedMs} ms)`);
 
 const report = [
-  'Dao Den Long - Phase 2 headless verification (Contract v1.1)',
+  'Dao Den Long - Phase 3 headless verification (Contract v1.2)',
   `date: ${new Date().toISOString()}`,
   `node: ${process.version}`,
   `checks: ${checks}`,

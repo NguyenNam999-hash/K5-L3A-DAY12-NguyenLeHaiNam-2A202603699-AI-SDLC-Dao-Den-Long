@@ -13,8 +13,8 @@ const contract = JSON.parse(readFileSync(join(process.cwd(), 'game.contract.json
 };
 
 describe('game.contract.json', () => {
-  it('declares contract version 1.1 and the required commands', () => {
-    expect(contract.contract_version).toBe('1.1');
+  it('declares contract version 1.2 and the required commands', () => {
+    expect(contract.contract_version).toBe('1.2');
     expect(contract.team.length).toBeGreaterThan(0);
     expect(contract.build_cmd).toContain('npm');
     expect(contract.run_cmd).toContain('npm');
@@ -34,9 +34,6 @@ describe('game.contract.json', () => {
       interact_radius: 2,
       pulse_cost: 3,
       pulse_radius: 5,
-      night1_duration_s: 300,
-      night2_duration_s: 330,
-      night3_duration_s: 360,
       dash_speed: 14,
       dash_duration_s: 0.2,
       dash_cooldown_s: 1.5,
@@ -50,12 +47,21 @@ describe('game.contract.json', () => {
       shade_speed: 4,
       shade_hit_radius: 1,
     });
-    expect(contract.tuning.score).toEqual({
-      per_mote: 10,
-      per_lantern: 100,
-      per_stun: 5,
-      per_second_left: 2,
-      per_flame_left: 50,
+  });
+
+  it('declares every Phase 3 value', () => {
+    expect(contract.tuning).toMatchObject({
+      fuel_max: 100,
+      fuel_decay_per_s: 1,
+      fuel_per_mote: 10,
+      relight_cost: 5,
+      win_ratio: 0.6,
+      drain_per_s: 5,
+      low_fuel_threshold: 30,
+      capacity_max: 20,
+      night1_duration_s: 240,
+      night2_duration_s: 270,
+      night3_duration_s: 300,
     });
   });
 });

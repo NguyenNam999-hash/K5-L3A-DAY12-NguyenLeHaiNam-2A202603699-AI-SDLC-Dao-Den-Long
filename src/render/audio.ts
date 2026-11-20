@@ -88,6 +88,11 @@ export class AudioFx {
     this.tone(140, 0.3, 'square', 0.05, 60);
   }
 
+  /** A lantern runs dry: a soft falling sigh, distinct from the hit thud. */
+  lanternOut(): void {
+    this.tone(330, 0.6, 'sine', 0.04, 110);
+  }
+
   jump(): void {
     this.tone(420, 0.12, 'triangle', 0.035, 620);
   }

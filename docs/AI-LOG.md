@@ -126,3 +126,62 @@ Cách tiết kiệm đã dùng:
 - **Chưa tốt**: chỉnh sáng/địa hình Đêm 3 mất vài vòng ảnh; lẽ ra nên dựng camera cao + đèn mẫu trước.
 - **Nếu làm lại**: viết test địa hình + tick order trước cả renderer; đặt ngân sách thời gian cho phần nhìn.
 - **Bài học**: log ngắn trong bot (vị trí, threat, pulse) rẻ hơn nhiều so với đoán vì sao bot thua.
+
+---
+
+# Nhật ký Phase 3 — "Đèn cạn dầu" (Contract v1.2)
+
+## Cách làm
+
+1. Đọc `README.md`, `docs/phase/PHASE-3.md`, toàn bộ lõi `src/core`, headless, test và các màn render.
+2. Viết ADR trước khi sửa luật: chốt mô hình `fuel60` số nguyên, thứ tự trừ dầu, ngưỡng an toàn,
+   trạng thái `drain` và luật bình minh.
+3. Sửa `tuning.ts` + `game.contract.json` cùng lúc, rồi mới sửa `game.ts`.
+4. Cập nhật test cũ bị luật mới làm sai; thêm test cho dầu, châm dầu, thắp lại, hút dầu, sức chứa,
+   bình minh và mù màu.
+5. Mở rộng `verify.mjs` lên 29 case, thêm scenario `25`–`29` và chuyển bằng chứng sang `evidence/phase-3/`.
+6. Viết lại bot theo chiến lược pre-fill 3 đèn rồi thắp trong 90 giây cuối.
+7. Cập nhật renderer: thanh dầu, nhấp nháy, giấy rách, bảng màu mù màu, HUD sức chứa, màn kết quả.
+8. Chạy test, typecheck, build, verify, bot, replay, shots; đọc ảnh trước khi tuyên bố xong.
+
+## Lỗi phát hiện và sửa
+
+| Lỗi | Phát hiện bằng | Sửa |
+|---|---|---|
+| Dầu dùng số thực sẽ lệch sau 14 400 tick | tính tay 1/60 + yêu cầu tất định | lưu `fuel60` nguyên, chỉ chia khi xuất |
+| Châm dầu ở tick 1 cần thêm 1 đom do dầu đã hao trước khi tương tác | test refuel đỏ | giữ đúng thứ tự Ticket (trừ dầu trước), sửa kỳ vọng test thành `ceil` tại thời điểm chọn |
+| Test "đèn đầy dầu không chọn" không dựng được trạng thái đầy sau 1 tick | test đỏ | bỏ test không khả thi, kiểm tra bằng nhánh `used = 0` và test châm một phần |
+| Vùng an toàn đúng 30 bị mất sau 1 tick | test biên đỏ | kiểm tra tại snapshot tick 0 thay vì sau 5 tick |
+| Bot cũ thắng bằng `all_lit` nên không còn đúng | `npm run bot` exit 1 | viết lại bot theo pre-fill + thắp cuối |
+| Bot đứng yên ở đèn vì "carried 0" vẫn chọn đèn | log `t=...` cho thấy vị trí không đổi | chỉ chọn đèn khi đang mang đom |
+| Bot nạp 1 đom rồi quay lại liên tục | log vị trí + carried | đặt ngưỡng chuyến 5 đom |
+| Bot phân tán tiến độ sang 5 đèn | log `interact` | ghim mục tiêu tới khi đèn sáng |
+| Bot bỏ đèn đang cần thắp để châm đèn khác | dòng `lantern_out` sát bình minh | tắt châm dầu khi chưa đủ 3 đèn |
+| Bot lao vào Bóng Mực khi đang "pressing" | 3 lần `player_hit` trong 177 s | cho né khi Bóng Mực < 2.3 m, bật Tỏa Sáng < 3 m |
+| Bot thắp đèn quá sớm nên cháy hết trước bình minh | log `lantern_out` | chỉ thắp trong 90 giây cuối, ưu tiên 3/5 |
+| HUD hiện 10 ô dù sức chứa tăng | xem ảnh Night 1 sau khi thắp | `ensureCarryCells(game.capacity)` |
+| Đèn tắt vẫn vẽ vùng an toàn trên mini-map | so ảnh với luật mới | chỉ vẽ khi `fuel >= 30` |
+
+## Harness đã chỉnh
+
+- `docs/SPEC.md`: thêm AC29–AC46 và giả định A22–A33.
+- `docs/adr/0001-lantern-fuel-and-dawn.md`: quyết định thiết kế.
+- `docs/CHANGELOG.md`: breaking changes Phase 3.
+- `scripts/verify.mjs`: 29 case, output `evidence/phase-3/headless/`.
+- `scripts/bot.ts`: bot v1.2 pre-fill, thắng tick 14 400.
+- `scripts/shots.mjs`: 17 ảnh phase-3, thêm ảnh dầu thấp, cận cảnh thanh dầu, mù màu.
+- `README.md`: luật, số liệu, điểm, lệnh và đường dẫn bằng chứng mới.
+
+## Token và chi phí (ước tính)
+
+- Đầu vào tích luỹ: khoảng **260k–340k token** (đọc lõi 1 200 dòng, renderer, test, tài liệu, log bot).
+- Đầu ra: khoảng **55k–70k token** (code, test, 4 tài liệu, log).
+- Chi phí ước tính: dưới **1.5 USD** ở mức giá model dùng thử.
+
+## Retro Phase 3
+
+- **Hiệu quả**: sửa lõi trước, chạy test ngay; nhờ vậy 7 test đỏ lộ ra trong một lần chạy thay vì sửa mò.
+- **Chưa tốt**: bot mất nhiều vòng vì vừa phải học luật mới vừa phải né Bóng Mực; lẽ ra nên dựng
+  biểu đồ trạng thái (thời điểm thắp, dầu, số lần bị đánh) trước khi chỉnh tham số.
+- **Nếu làm lại**: viết bot "pre-fill rồi thắp cuối" ngay từ đầu, và đặt test cho luật thắng trước renderer.
+- **Bài học**: log ngắn có mốc tick rẻ hơn đoán; ảnh chụp cận cảnh mới thấy thanh dầu, ảnh toàn cảnh thì không.
