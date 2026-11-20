@@ -44,6 +44,8 @@ export interface GameOptions {
   night?: NightId;
   scenario?: Scenario;
   random?: Rng;
+  /** Phase 4 benchmark: freeze damage, spawn, pickups, fuel and end checks. */
+  benchmark?: boolean;
 }
 
 interface ShadeSpawn {
@@ -52,7 +54,7 @@ interface ShadeSpawn {
 }
 
 /**
- * Headless-safe gameplay core (Contract v1.2). Deterministic: same seed + scenario + inputs
+ * Headless-safe gameplay core (Contract v1.3). Deterministic: same seed + scenario + inputs
  * => same events. Rendering reads this state; it never writes it.
  */
 export class Game {
@@ -60,6 +62,7 @@ export class Game {
   readonly physics = PHYSICS;
   readonly night: NightId;
   readonly config: NightConfig;
+  readonly benchmark: boolean;
 
   tick = 0;
   simTick = 0;
@@ -142,6 +145,7 @@ export class Game {
 
   constructor(opts: GameOptions) {
     this.rng = opts.random ?? new Rng(opts.seed);
+    this.benchmark = opts.benchmark === true;
     this.night = (opts.night ?? opts.scenario?.night ?? 1) as NightId;
     this.config = nightConfig(this.night);
     this.timeBase = this.config.durationS;
@@ -209,40 +213,50 @@ export class Game {
       return;
     }
 
-    this.updateLanternFuel();
+    if (!this.benchmark) this.updateLanternFuel();
 
     this.updateWind(dt);
     this.movePlayer(input, dt);
-    this.checkFall();
+    if (!this.benchmark) this.checkFall();
     if (this.state !== 'playing') {
       this.prev = { ...input };
       return;
     }
 
     if (!this.falling) {
-      this.collectMotes();
-      this.collectCharms();
-      if (input.interact && !this.prev.interact) this.tryInteract();
+      if (!this.benchmark) {
+        this.collectMotes();
+        this.collectCharms();
+        if (input.interact && !this.prev.interact) this.tryInteract();
+      }
 
       // Step 6: lit lanterns claim their safe circle before Pulse resolves.
       for (const shade of this.shades) this.keepOutOfLanternLight(shade);
 
-      if (input.pulse && !this.prev.pulse && this.pulseCdTicks <= 0 && this.carried >= TUNING.pulse_cost) {
+      if (
+        !this.benchmark &&
+        input.pulse &&
+        !this.prev.pulse &&
+        this.pulseCdTicks <= 0 &&
+        this.carried >= TUNING.pulse_cost
+      ) {
         this.pulse();
       }
     }
 
     this.updateShades(dt);
     this.updateDrifters(dt);
-    this.contact();
+    if (!this.benchmark) this.contact();
     if (this.state !== 'playing') {
       this.prev = { ...input };
       return;
     }
 
-    this.spawnScheduled();
+    if (!this.benchmark) {
+      this.spawnScheduled();
 
-    if (this.state === 'playing') this.checkEnd();
+      if (this.state === 'playing') this.checkEnd();
+    }
     this.prev = { ...input };
   }
 
@@ -967,6 +981,22 @@ export class Game {
   private updateShades(dt: number): void {
     for (const s of this.shades) {
       if (s.safeTicks > 0) s.safeTicks -= 1;
+
+      if (this.benchmark && s.state !== 'spawning' && s.state !== 'stunned') {
+        // Benchmark: keep wander motion, drop chase/drain state changes.
+        const phase = Number(s.id.slice(1)) || 1;
+        const angle = phase * 0.7 + this.simTick * 0.01;
+        const step = PHYSICS.shade_wander_speed * dt;
+        const tx = s.x + Math.cos(angle) * step;
+        const tz = s.z + Math.sin(angle) * step;
+        if (this.walkableForShade(tx, tz, s.y)) {
+          s.x = tx;
+          s.z = tz;
+        }
+        s.y = this.shadeY(s.x, s.z);
+        this.keepOutOfLanternLight(s);
+        continue;
+      }
 
       if (s.state === 'spawning') {
         s.stateTicksLeft -= 1;

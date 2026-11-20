@@ -9,16 +9,20 @@ const contract = JSON.parse(readFileSync(join(process.cwd(), 'game.contract.json
   build_cmd: string;
   run_cmd: string;
   headless_cmd: string;
+  bench_cmd: string;
+  soak_cmd: string;
   tuning: Record<string, unknown>;
 };
 
 describe('game.contract.json', () => {
-  it('declares contract version 1.2 and the required commands', () => {
-    expect(contract.contract_version).toBe('1.2');
+  it('declares contract version 1.3 and the required commands', () => {
+    expect(contract.contract_version).toBe('1.3');
     expect(contract.team.length).toBeGreaterThan(0);
     expect(contract.build_cmd).toContain('npm');
-    expect(contract.run_cmd).toContain('npm');
+    expect(contract.run_cmd).toContain('app.js');
     expect(contract.headless_cmd).toContain('main.js');
+    expect(contract.bench_cmd).toContain('bench');
+    expect(contract.soak_cmd).toContain('soak');
   });
 
   it('matches the tuning used by the game', () => {
