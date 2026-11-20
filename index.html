@@ -113,7 +113,7 @@
             <button id="pause-settings-btn" class="btn ghost" type="button">Cài đặt</button>
             <button id="pause-menu-btn" class="btn ghost" type="button">Về menu</button>
           </div>
-          <ul class="rules compact">
+          <ul id="pause-keys" class="rules compact">
             <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> di chuyển · <kbd>Space</kbd> nhảy · <kbd>Shift</kbd> lướt</li>
             <li><kbd>E</kbd> thắp đèn / châm dầu · <kbd>F</kbd> tỏa sáng · <kbd>M</kbd> tắt âm thanh</li>
             <li>Bóng Mực hút dầu đèn dưới 30. Đèn cạn dầu tắt và mất vùng an toàn.</li>
@@ -175,6 +175,16 @@
               <button class="seg-btn" data-difficulty="hard" type="button">Khó</button>
             </div>
           </div>
+
+          <div class="setting-row">
+            <div class="setting-copy">
+              <span class="setting-label">Phím điều khiển</span>
+              <span class="setting-desc">Bấm vào nút rồi nhấn phím mới. Esc để huỷ; phím trùng sẽ bị từ chối.</span>
+            </div>
+            <button id="keybinds-reset" class="btn ghost" type="button">Khôi phục mặc định</button>
+          </div>
+          <div id="keybind-list" class="keybind-list"></div>
+          <p id="keybind-error" class="keybind-error" role="alert" hidden></p>
 
           <button id="settings-back" class="btn primary" type="button">Quay lại</button>
           <p class="fineprint">Cài đặt được lưu giữa các lần mở game.</p>

@@ -438,6 +438,8 @@ body {
   inset: 0;
   display: grid;
   place-items: center;
+  /* Tall cards (settings on small screens) must scroll from the top, not clip. */
+  align-items: safe center;
   padding: 24px;
   background: radial-gradient(circle at 50% 35%, rgba(20, 28, 66, 0.5), rgba(4, 6, 18, 0.86));
   backdrop-filter: blur(3px);
@@ -620,6 +622,41 @@ kbd {
 
 .settings-card {
   width: min(720px, 94vw);
+}
+
+.keybind-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.keybind-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.keybind-name {
+  font-size: 14px;
+}
+
+.keybind-btn {
+  min-width: 96px;
+  font-variant-numeric: tabular-nums;
+}
+
+.keybind-btn.capturing {
+  border-color: var(--lit);
+  color: var(--lit);
+}
+
+.keybind-error {
+  margin: 4px 0 0;
+  color: #ff9b8a;
+  font-size: 14px;
 }
 
 .setting-row {

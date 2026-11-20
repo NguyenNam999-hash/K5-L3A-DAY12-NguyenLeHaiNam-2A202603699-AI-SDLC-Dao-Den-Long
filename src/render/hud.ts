@@ -27,6 +27,7 @@ export class Hud {
   private readonly timer = el<HTMLDivElement>('#timer');
   private readonly score = el<HTMLDivElement>('#score');
   private readonly hint = el<HTMLDivElement>('#hint');
+  private keyLabels = { interact: 'E', dash: 'Shift', pulse: 'F' };
   private readonly dashFill = el<HTMLDivElement>('#dash-fill');
   private readonly pulseFill = el<HTMLDivElement>('#pulse-fill');
   private readonly dashLabel = el<HTMLDivElement>('#dash-label');
@@ -152,12 +153,12 @@ export class Hud {
     const dashProgress = dashCd > 0 ? Math.max(0, 1 - game.dashCdTicks * DT / dashCd) : 1;
     this.dashFill.style.width = `${game.charmTicks > 0 ? 100 : dashProgress * 100}%`;
     this.dashFill.classList.toggle('ready', game.dashCdTicks <= 0);
-    this.dashLabel.textContent = game.charmTicks > 0 ? 'Lướt · Bùa Gió' : 'Lướt [Shift]';
+    this.dashLabel.textContent = game.charmTicks > 0 ? 'Lướt · Bùa Gió' : `Lướt [${this.keyLabels.dash}]`;
 
     const pulseProgress = TUNING.pulse_cooldown_s > 0 ? Math.max(0, 1 - game.pulseCdTicks * DT / TUNING.pulse_cooldown_s) : 1;
     this.pulseFill.style.width = `${game.carried < TUNING.pulse_cost ? 0 : pulseProgress * 100}%`;
     this.pulseFill.classList.toggle('ready', game.pulseCdTicks <= 0 && game.carried >= TUNING.pulse_cost);
-    this.pulseLabel.textContent = `Tỏa sáng [F] · ${TUNING.pulse_cost}`;
+    this.pulseLabel.textContent = `Tỏa sáng [${this.keyLabels.pulse}] · ${TUNING.pulse_cost}`;
 
     this.charmTag.hidden = game.charmTicks <= 0;
     if (game.charmTicks > 0) this.charmTag.textContent = `Bùa Gió ${Math.ceil(game.charmTicks * DT)} s`;
@@ -183,18 +184,22 @@ export class Hud {
       const fuel = game.fuelOf(lantern);
       if (lantern.lit) {
         if (fuel >= TUNING.fuel_max) return `Đèn đầy dầu (${Math.floor(fuel)}/${TUNING.fuel_max})`;
-        if (game.carried > 0) return `E — Châm dầu (${Math.floor(fuel)}/${TUNING.fuel_max})`;
+        if (game.carried > 0) return `${this.keyLabels.interact} — Châm dầu (${Math.floor(fuel)}/${TUNING.fuel_max})`;
         return `Đèn còn ${Math.floor(fuel)} dầu — cần thêm đom đóm`;
       }
       const required = lantern.everLit ? TUNING.relight_cost : TUNING.lantern_cost;
       if (game.carried > 0) {
-        return `E — ${lantern.everLit ? 'Thắp lại' : 'Nạp ánh sáng'} (${lantern.deposited}/${required})`;
+        return `${this.keyLabels.interact} — ${lantern.everLit ? 'Thắp lại' : 'Nạp ánh sáng'} (${lantern.deposited}/${required})`;
       }
       return `Đèn cần ${Math.max(0, required - lantern.deposited)} đom đóm nữa`;
     }
     if (game.carried >= game.capacity) return 'Đã đầy ánh sáng — mang về Đèn Lồng Lớn';
     if (game.carried > 0) return `Đang mang ${game.carried} đom đóm`;
     return 'Đi qua đom đóm để nhặt ánh sáng';
+  }
+
+  setKeyLabels(labels: { interact: string; dash: string; pulse: string }): void {
+    this.keyLabels = labels;
   }
 
   private setHint(text: string): void {

@@ -6,6 +6,7 @@ import { groundHeight, isSolid } from '../core/terrain';
 import type { InputFrame, NightId } from '../core/types';
 import { AudioFx } from './audio';
 import { Hud } from './hud';
+import { ACTIONS, formatCode, type Action } from './keybinds';
 import { Minimap } from './minimap';
 import { DIFFICULTIES, Settings } from './settings';
 import { createWorld, type World } from './world';
@@ -110,8 +111,11 @@ window.addEventListener('resize', resize);
 resize();
 
 function readInput(): InputFrame {
-  const forward = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
-  const side = (keys.has('KeyA') ? 1 : 0) - (keys.has('KeyD') ? 1 : 0);
+  const code = (action: Action): string => settings.keybinds.codeFor(action);
+  const forward =
+    (keys.has(code('moveForward')) || keys.has('ArrowUp') ? 1 : 0) -
+    (keys.has(code('moveBack')) || keys.has('ArrowDown') ? 1 : 0);
+  const side = (keys.has(code('moveLeft')) ? 1 : 0) - (keys.has(code('moveRight')) ? 1 : 0);
   const input: InputFrame = {
     moveX: side,
     moveZ: forward,
@@ -253,6 +257,23 @@ settings.onClose = () => {
     phase = 'paused';
   }
 };
+
+/** Keeps HUD hints and menu copy in step with the player's bindings. */
+function applyKeyLabels(): void {
+  const label = (action: Action): string => settings.keyLabel(action);
+  hud.setKeyLabels({ interact: label('interact'), dash: label('dash'), pulse: label('pulse') });
+  const controls = document.querySelector<HTMLDivElement>('.controls');
+  if (controls) {
+    controls.textContent = `${label('moveForward')}${label('moveLeft')}${label('moveBack')}${label('moveRight')} di chuyển · Chuột nhìn · ${label('jump')} nhảy · ${label('dash')} lướt · ${label('interact')} thắp đèn / châm dầu · ${label('pulse')} tỏa sáng · Giữ Q nhìn từ trên cao · ${label('pause')}/Esc tạm dừng`;
+  }
+  const pauseKeys = document.querySelector<HTMLUListElement>('#pause-keys');
+  if (pauseKeys) {
+    pauseKeys.textContent = `${label('moveForward')} ${label('moveLeft')} ${label('moveBack')} ${label('moveRight')} di chuyển · ${label('jump')} nhảy · ${label('dash')} lướt · ${label('interact')} thắp đèn · ${label('pulse')} tỏa sáng · M tắt âm thanh. Bóng Mực hút dầu đèn dưới 30.`;
+  }
+}
+
+settings.onKeybindsChange = applyKeyLabels;
+applyKeyLabels();
 
 function flash(): void {
   shake = 0.5;
@@ -465,9 +486,9 @@ function frame(now: number): void {
 // --- Keyboard / mouse ---
 
 window.addEventListener('keydown', (event) => {
-  if (['Space', 'KeyE', 'KeyQ', 'KeyF', 'ShiftLeft', 'ShiftRight', 'ArrowUp', 'ArrowDown'].includes(event.code)) {
-    event.preventDefault();
-  }
+  const code = (action: Action): string => settings.keybinds.codeFor(action);
+  const prevent = [...ACTIONS.map(code), 'Escape', 'KeyQ', 'ArrowUp', 'ArrowDown'];
+  if (prevent.includes(event.code)) event.preventDefault();
   if (event.repeat) return;
   keys.add(event.code);
 
@@ -482,7 +503,7 @@ window.addEventListener('keydown', (event) => {
     return;
   }
 
-  if (event.code === 'KeyP' || event.code === 'Escape') {
+  if (event.code === code('pause') || event.code === 'Escape') {
     if (!document.querySelector<HTMLDivElement>('#settings')!.hidden) {
       settings.hide();
       return;
@@ -505,13 +526,13 @@ window.addEventListener('keydown', (event) => {
   }
 
   if (phase !== 'playing') return;
-  if (event.code === 'Space') {
+  if (event.code === code('jump')) {
     jumpQueued = true;
     audio.jump();
   }
-  if (event.code === 'KeyE') interactQueued = true;
-  if (event.code === 'KeyF') pulseQueued = true;
-  if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') dashQueued = true;
+  if (event.code === code('interact')) interactQueued = true;
+  if (event.code === code('pulse')) pulseQueued = true;
+  if (event.code === code('dash')) dashQueued = true;
 });
 window.addEventListener('keyup', (event) => {
   keys.delete(event.code);

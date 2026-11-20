@@ -1,4 +1,5 @@
 import type { AudioFx } from './audio';
+import { ACTIONS, ACTION_LABELS, formatCode, Keybinds, type Action } from './keybinds';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -56,6 +57,7 @@ function el<T extends HTMLElement>(selector: string): T {
 /** Settings shared by the main menu and the pause menu, persisted in localStorage. */
 export class Settings {
   values: PersistedSettings;
+  readonly keybinds = new Keybinds();
   private readonly root = el<HTMLDivElement>('#settings');
   private readonly volume = el<HTMLInputElement>('#volume-slider');
   private readonly volumeVal = el<HTMLSpanElement>('#volume-val');
@@ -68,6 +70,12 @@ export class Settings {
     document.querySelectorAll<HTMLButtonElement>('#difficulty-group .seg-btn'),
   );
   private readonly backBtn = el<HTMLButtonElement>('#settings-back');
+  private readonly keybindList = el<HTMLDivElement>('#keybind-list');
+  private readonly keybindError = el<HTMLParagraphElement>('#keybind-error');
+  private readonly keybindReset = el<HTMLButtonElement>('#keybinds-reset');
+  private readonly keyButtons = new Map<Action, HTMLButtonElement>();
+  private captureHandler: ((event: KeyboardEvent) => void) | null = null;
+  private capturing: Action | null = null;
 
   constructor(private readonly audio: AudioFx) {
     this.values = this.load();
@@ -101,10 +109,81 @@ export class Settings {
       });
     }
     this.backBtn.addEventListener('click', () => this.hide());
+    this.buildKeybinds();
+    this.keybindReset.addEventListener('click', () => {
+      this.keybinds.reset();
+      this.endCapture();
+      this.showKeyError('');
+      this.onKeybindsChange();
+    });
   }
 
   onClose: () => void = () => {};
   onColorblindChange: (on: boolean) => void = () => {};
+  onKeybindsChange: () => void = () => {};
+
+  keyLabel(action: Action): string {
+    return this.keybinds.label(action);
+  }
+
+  private buildKeybinds(): void {
+    for (const action of ACTIONS) {
+      const row = document.createElement('div');
+      row.className = 'keybind-row';
+      const label = document.createElement('span');
+      label.className = 'keybind-name';
+      label.textContent = ACTION_LABELS[action];
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn ghost keybind-btn';
+      button.textContent = this.keybinds.label(action);
+      button.setAttribute('aria-label', `Đổi phím ${ACTION_LABELS[action]}`);
+      button.addEventListener('click', () => this.capture(action));
+      row.append(label, button);
+      this.keybindList.append(row);
+      this.keyButtons.set(action, button);
+    }
+  }
+
+  private capture(action: Action): void {
+    this.endCapture();
+    this.capturing = action;
+    const button = this.keyButtons.get(action);
+    button?.classList.add('capturing');
+    if (button) button.textContent = 'Nhấn phím…';
+    this.captureHandler = (event: KeyboardEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.code === 'Escape') {
+        this.endCapture();
+        return;
+      }
+      const result = this.keybinds.set(action, event.code);
+      if (!result.ok) {
+        this.showKeyError(`Phím ${formatCode(event.code)} đang dùng cho ${ACTION_LABELS[result.conflict]}`);
+      } else {
+        this.showKeyError('');
+        this.onKeybindsChange();
+      }
+      this.endCapture();
+    };
+    document.addEventListener('keydown', this.captureHandler, true);
+  }
+
+  private endCapture(): void {
+    if (this.captureHandler) document.removeEventListener('keydown', this.captureHandler, true);
+    this.captureHandler = null;
+    this.capturing = null;
+    for (const [action, button] of this.keyButtons) {
+      button.classList.remove('capturing');
+      button.textContent = this.keybinds.label(action);
+    }
+  }
+
+  private showKeyError(text: string): void {
+    this.keybindError.textContent = text;
+    this.keybindError.hidden = text.length === 0;
+  }
 
   get difficulty(): Difficulty {
     return this.values.difficulty;
