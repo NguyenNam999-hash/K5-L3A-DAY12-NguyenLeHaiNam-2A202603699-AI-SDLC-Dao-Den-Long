@@ -83,8 +83,8 @@ bản đồ là `y < -10`.
   điểm trống nếu dưới trần.
 - Đom đóm rơi có `kind = "dropped"`, TTL 480 tick, nhặt được từ tick sau, không tính vào trần sinh.
 - Nhặt: XZ ≤ 1.0 m **và** `|py − groundHeight(mote)| ≤ 1.5`; đầy 10 thì không nhặt.
-- Đèn: nạp `min(đang mang, còn thiếu)` khi bấm `E` trong 2.0 m (dùng khoảng cách 3D tới tâm đèn để
-  tầng không bị nạp nhầm); chọn đèn chưa sáng gần nhất, hòa thì id nhỏ hơn.
+- Đèn: nạp `min(đang mang, còn thiếu)` khi bấm `E` trong 2.0 m XZ **và** chênh cao ≤ 1.5 m để tầng
+  không bị nạp nhầm; chọn đèn chưa sáng gần nhất, hòa thì id nhỏ hơn.
 - Điểm: +10 mỗi đom đóm **nạp vào đèn**, +100 mỗi đèn, +5 mỗi Bóng Mực trúng mỗi lần Tỏa Sáng (kể cả
   đang choáng), thắng: `floor(giây còn lại) × 2 + 50 × lửa còn lại`.
 
@@ -172,5 +172,5 @@ bản đồ là `y < -10`.
 Không còn câu hỏi chặn. Ba điểm dưới đây là **đề xuất**, có thể sửa trước khi code:
 
 1. Điểm đom đóm tính lúc **nạp** (A13) — đúng chữ "nạp" của Contract v1.1.
-2. Tương tác đèn dùng khoảng cách **3D** để tầng không bị nạp nhầm.
+2. Tương tác đèn dùng **XZ 2.0 m + chênh cao ≤ 1.5 m** để tầng không bị nạp nhầm mà vẫn đúng bán kính.
 3. Giữ khóa `fall_enabled` trong contract (giá trị `true`) để không phá scenario/kiểm tra cũ.
