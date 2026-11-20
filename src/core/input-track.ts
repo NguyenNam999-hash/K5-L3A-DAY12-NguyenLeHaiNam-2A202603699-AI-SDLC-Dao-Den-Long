@@ -28,6 +28,8 @@ export class InputTrack {
       if (frame.jump !== undefined) this.current.jump = frame.jump;
       if (frame.interact !== undefined) this.current.interact = frame.interact;
       if (frame.pulse !== undefined) this.current.pulse = frame.pulse;
+      if (frame.dash !== undefined) this.current.dash = frame.dash;
+      if (frame.pause !== undefined) this.current.pause = frame.pause;
     }
     return this.current;
   }

@@ -1,7 +1,7 @@
 /**
- * Captures UI screenshots with Playwright against the Vite dev server.
+ * Captures Phase 2 UI screenshots with Playwright against the Vite dev server.
  *
- * Usage: npm run dev   (in one terminal)
+ * Usage: npx vite --port 5173   (in one terminal)
  *        node scripts/shots.mjs
  */
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -9,16 +9,15 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
 
-const outDir = join('evidence', 'phase-1', 'ui');
+const outDir = join('evidence', 'phase-2', 'ui');
 mkdirSync(outDir, { recursive: true });
 
-// Reuse a cached Chromium if the bundled revision is not downloaded (offline-friendly).
 const cached = join(
   homedir(),
   'Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
 );
 const browser = await chromium.launch(existsSync(cached) ? { executablePath: cached } : {});
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
 const errors = [];
 page.on('pageerror', (error) => errors.push(error.message));
 page.on('console', (message) => {
@@ -29,11 +28,15 @@ page.on('response', (response) => {
 });
 
 await page.goto('http://localhost:5173/?seed=7', { waitUntil: 'networkidle' });
-await page.waitForTimeout(1500);
-await page.screenshot({ path: join(outDir, '01-start.png') });
+await page.waitForTimeout(1400);
+await page.screenshot({ path: join(outDir, '01-menu.png') });
 
-await page.click('#start-btn');
+await page.click('#campaign-btn');
 await page.waitForTimeout(500);
+await page.screenshot({ path: join(outDir, '02-intro-night1.png') });
+
+await page.click('#intro-btn');
+await page.waitForTimeout(900);
 const fps = await page.evaluate(
   () =>
     new Promise((resolve) => {
@@ -47,14 +50,17 @@ const fps = await page.evaluate(
       requestAnimationFrame(tick);
     }),
 );
-writeFileSync(join(outDir, 'fps.txt'), `measured requestAnimationFrame rate: ~${fps} fps (1440x900, Chromium headless)\n`);
+writeFileSync(
+  join(outDir, 'fps.txt'),
+  `measured requestAnimationFrame rate: ~${fps} fps (1280x720, Chromium headless)\n`,
+);
 console.log(`fps: ${fps}`);
-await page.waitForTimeout(700);
+
 await page.keyboard.down('w');
-await page.waitForTimeout(2200);
+await page.waitForTimeout(1600);
 await page.keyboard.up('w');
-await page.waitForTimeout(500);
-await page.screenshot({ path: join(outDir, '02-gameplay.png') });
+await page.waitForTimeout(400);
+await page.screenshot({ path: join(outDir, '03-night1.png') });
 
 // Pose a mid-night state: three lanterns lit, Mây carrying light, a shade nearby.
 await page.evaluate(() => {
@@ -62,33 +68,132 @@ await page.evaluate(() => {
   for (const lantern of game.lanterns) {
     if (['L1', 'L2', 'L3'].includes(lantern.id)) {
       lantern.lit = true;
-      lantern.deposited = 3;
+      lantern.deposited = 10;
     }
   }
-  game.carried = 4;
+  game.carried = 7;
   game.flames = 2;
   game.score = 640;
-  game.shades = [{ id: 'S9', x: game.px + 4.5, z: game.pz + 3, state: 'chase', stunTimer: 0 }];
+  game.invulnTicks = 0;
+  game.motes = [
+    { id: 'M901', x: game.px + 2.5, y: game.py, z: game.pz + 1.4, kind: 'random', ttlTicks: null, pickupDelayTicks: 0 },
+    { id: 'M902', x: game.px - 3.4, y: game.py, z: game.pz - 1.1, kind: 'dropped', ttlTicks: 480, pickupDelayTicks: 0 },
+  ];
+  game.shades = [
+    {
+      id: 'S9',
+      x: game.px + 5.5,
+      y: game.py + 1,
+      z: game.pz + 4,
+      state: 'chase',
+      stateTicksLeft: 0,
+      safeTicks: 0,
+      vx: 0,
+      vz: 0,
+      pushTicksLeft: 0,
+    },
+  ];
+  game.drifters = [];
 });
 await page.waitForTimeout(1400);
-await page.screenshot({ path: join(outDir, '03-lit-lanterns.png') });
+await page.screenshot({ path: join(outDir, '04-night1-lit.png') });
 
-// Pose the win overlay.
+// Hold Q: simulation freezes, camera goes top-down.
+await page.keyboard.down('q');
+await page.waitForTimeout(700);
+const overviewTickBefore = await page.evaluate(() => window.__dao.game().tick);
+await page.waitForTimeout(600);
+const overviewTickAfter = await page.evaluate(() => window.__dao.game().tick);
+await page.screenshot({ path: join(outDir, '04b-overview.png') });
+await page.keyboard.up('q');
+console.log(`overview hold: ticks ${overviewTickBefore} -> ${overviewTickAfter} (should be equal)`);
+await page.waitForTimeout(400);
+
+// Pause freezes tick, then settings.
+await page.keyboard.press('p');
+await page.waitForTimeout(350);
+await page.screenshot({ path: join(outDir, '05-pause.png') });
+const tickBefore = await page.evaluate(() => window.__dao.game().tick);
+await page.waitForTimeout(600);
+const tickAfter = await page.evaluate(() => window.__dao.game().tick);
+console.log(`pause: ticks ${tickBefore} -> ${tickAfter} (should be equal)`);
+await page.click('#pause-settings-btn');
+await page.waitForTimeout(300);
+await page.screenshot({ path: join(outDir, '06-settings.png') });
+await page.click('[data-difficulty="hard"]');
+await page.waitForTimeout(250);
+await page.screenshot({ path: join(outDir, '07-settings-hard.png') });
+await page.click('#settings-back');
+await page.waitForTimeout(250);
+await page.click('#resume-btn');
+await page.waitForTimeout(350);
+
+// Night 2, bridge and jump pad.
+await page.evaluate(() => window.__dao.startNight(2));
+await page.waitForTimeout(700);
 await page.evaluate(() => {
   const game = window.__dao.game();
-  for (const lantern of game.lanterns) {
-    lantern.lit = true;
-    lantern.deposited = 3;
-  }
-  game.stats.lanterns = 5;
-  game.stats.motes = 18;
-  game.flames = 2;
-  game.score = 1580;
-  game.timeLeft = () => 96;
-  game.finish('won', 'all_lit');
+  game.px = 30;
+  game.py = 0;
+  game.pz = 0;
+  game.carried = 6;
+  game.flames = 3;
+  game.lanterns[3].lit = true;
+  game.lanterns[4].lit = true;
+  game.drifters = [
+    { id: 'D1', x: 37, y: 1.6, z: 2.5, state: 'chase', stolen: 0, stateTicksLeft: 0, vx: 0, vz: 0 },
+  ];
+  window.__dao.setView(90, 0.34);
 });
-await page.waitForTimeout(1400);
-await page.screenshot({ path: join(outDir, '04-win-overlay.png') });
+await page.waitForTimeout(1200);
+await page.screenshot({ path: join(outDir, '08-night2-bridge.png') });
+
+await page.evaluate(() => {
+  const game = window.__dao.game();
+  game.px = 20;
+  game.py = 0;
+  game.pz = 18;
+  window.__dao.setView(200, 0.5);
+});
+await page.waitForTimeout(900);
+await page.screenshot({ path: join(outDir, '08b-night2-pad.png') });
+
+// Night 3, tiers, tower and wind.
+await page.evaluate(() => window.__dao.startNight(3));
+await page.waitForTimeout(700);
+await page.evaluate(() => {
+  const game = window.__dao.game();
+  game.px = 0;
+  game.py = 0;
+  game.pz = 34;
+  game.carried = 8;
+  game.charmTicks = 420;
+  game.lanterns[0].lit = true;
+  game.lanterns[1].lit = true;
+  game.lanterns[3].lit = true;
+  game.wind = { active: true, dirDeg: 120 };
+  window.__dao.setView(180, 0.3);
+  game.shades = [
+    {
+      id: 'S3',
+      x: 5,
+      y: 1,
+      z: 22,
+      state: 'stunned',
+      stateTicksLeft: 100,
+      safeTicks: 0,
+      vx: 0,
+      vz: 0,
+      pushTicksLeft: 0,
+    },
+  ];
+});
+await page.waitForTimeout(1200);
+await page.screenshot({ path: join(outDir, '09-night3.png') });
+
+await page.evaluate(() => window.__dao.sunrise(2860));
+await page.waitForTimeout(600);
+await page.screenshot({ path: join(outDir, '10-sunrise.png') });
 
 console.log(errors.length === 0 ? 'SHOTS OK, no page errors' : `page errors:\n${errors.join('\n')}`);
 await browser.close();

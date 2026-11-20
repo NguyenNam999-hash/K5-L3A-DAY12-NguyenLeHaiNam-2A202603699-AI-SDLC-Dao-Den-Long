@@ -1,6 +1,7 @@
 {
   "random_motes": false,
   "random_shades": false,
-  "player": { "carried": 2, "flames": 3 },
-  "shades": [{ "pos": [0, 0, 1] }]
+  "random_drifters": false,
+  "player": { "carried": 10, "flames": 3 },
+  "shades": [{ "pos": [0, 0, 0.5] }]
 }

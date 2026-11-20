@@ -1,0 +1,28 @@
+
+> dao-den-long@0.1.0 test
+> vitest run
+
+
+ RUN  v5.1.1 /Users/namnlh/Desktop/workspace/AI-code/ResearchAgent-temp/K5-L3A-DAY12-NguyenLeHaiNam-2A202603699-AI-SDLC-Dao-Den-Long
+
+scenario file is not valid JSON: Expected property name or '}' in JSON at position 2 (line 1 column 3)
+scenario.player.pos: expected [x, y, z]
+scenario.lanterns: unknown lantern id "L99"
+scenario.night: expected 1, 2 or 3
+inputs.frames[1].tick: ticks must increase strictly (5 after 5)
+inputs.frames[0].move: components must be within [-1, 1]
+inputs file not found: /var/folders/8y/zbxw7j8x6tq43p5pdt0txn_r0000gp/T/dao-den-long-Klxapm/missing.json
+--seed is required
+Usage: node dist-node/headless/main.js --seed <int> --night <1|2|3> --ticks <int> --out <file.jsonl>
+       [--scenario <file.json>] [--inputs <file.json>] [--snapshot-every <int>]
+--seed: expected an integer, got "x"
+Usage: node dist-node/headless/main.js --seed <int> --night <1|2|3> --ticks <int> --out <file.jsonl>
+       [--scenario <file.json>] [--inputs <file.json>] [--snapshot-every <int>]
+--night: expected 1, 2 or 3 (got 4)
+--night: expected 1, 2 or 3 (got 0)
+
+ Test Files  5 passed (5)
+      Tests  78 passed (78)
+   Start at  17:10:59
+   Duration  169ms (tests 47%, import 24%, transform 23%, worker 7%)
+

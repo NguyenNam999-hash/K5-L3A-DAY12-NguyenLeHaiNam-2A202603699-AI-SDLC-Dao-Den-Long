@@ -65,3 +65,64 @@ Cách tiết kiệm đã dùng:
 - **Chưa tốt**: hai vòng lặp chỉnh sáng/ánh sáng tốn thời gian; lẽ ra nên chụp ảnh sớm hơn nữa.
 - **Nếu làm lại**: dựng `verify.mjs` ngay sau khi có CLI, trước khi viết renderer; đặt giới hạn thời gian cho phần làm đẹp.
 - **Bài học**: "agent bảo chạy rồi" không đủ; mọi tuyên bố trong README đều có file bằng chứng tương ứng.
+
+---
+
+# Nhật ký Phase 2 — "Ba hòn đảo"
+
+## Cách làm
+
+1. Đọc `README.md`, `docs/phase/PHASE-2.md`, toàn bộ lõi + renderer Phase 1.
+2. Dùng skill `brainstorming`: viết thiết kế `docs/superpowers/specs/2026-11-20-phase-2-design.md`,
+   chốt ba điểm mơ hồ (điểm lúc nạp, tương tác đèn theo tầng, giữ `fall_enabled`).
+3. Dùng skill `writing-plans`: kế hoạch `docs/superpowers/plans/2026-11-20-phase-2.md`, 11 task.
+4. Thực thi native: contract + lõi → headless + test → renderer/chiến dịch → bot → bằng chứng → tài liệu.
+
+## Thay đổi lớn
+
+- `TUNING` thay toàn bộ bằng số v1.1; tách `PHYSICS` cho hằng số ngoài contract.
+- Thêm `nights.ts` (dữ liệu ba Đêm) và `terrain.ts` (độ cao/va chạm thuần).
+- Viết lại `Game.step()` theo 12 bước của PHASE-2: tạm dừng, gió, lướt, bục nhảy, rơi, đom rơi TTL,
+  Bóng Mực 5 trạng thái, Gió Lạc, Bùa Gió.
+- Snapshot/event/scenario/input lên v1.1; `night_start` phát tick 1.
+- Renderer thành chiến dịch 3 Đêm: menu, giới thiệu, tạm dừng, cài đặt lưu bền, Bình Minh; world dựng
+  theo Đêm; HUD đầy đủ; nhạc nền procedural; mini-map v1.1.
+- `verify.mjs` lên 24 case, gồm Đêm 2/3, tất định và hiệu năng.
+- Bot v1.1 dùng trường thế (hút mục tiêu, đẩy mọi Bóng Mực gần), nạp mỗi 5 đom đóm; thắng Đêm 1.
+
+## Lỗi phát hiện và sửa
+
+| Lỗi | Phát hiện bằng | Sửa |
+|---|---|---|
+| `Hud` truy vấn `#menu-btn` trong khi HTML đặt `#to-menu-btn` → app trắng | Playwright `pageerror` | đổi selector |
+| Trọng lực trừ hai lần khi lướt trên không | test "air dash keeps height" đỏ | chỉ trừ khi hết dash |
+| Đẩy pulse cộng dồn `4/15 × pushTicksLeft` → 32 m | đọc vị trí Bóng Mực sau 15 tick | đẩy cố định `4/15` mỗi tick |
+| Nhiều Bóng Mực cùng chạm trong một tick → mất nhiều lửa | test "một hit mỗi tick" | dừng vòng lặp khi đã bất tử |
+| Bot pulse khi Bóng Mực ở 6 m nhưng bán kính chỉ 5 → tốn 3 đom mà không trúng | log `pulse stunned_ids: []` | hạ ngưỡng xuống 4.8 m |
+| Bot chạy vòng quanh vành đảo, Bóng Mực đón đầu | log vị trí mỗi 120 tick | trường thế + chạy thẳng ra xa khi < 5 m |
+| Camera tụt vào vách tầng 3, màn hình đen | xem ảnh `09-night3` lần đầu | kiểm tra độ cao dọc tia camera, kéo camera lại gần |
+| Vách/tầng Đêm 3 gần như đen | xem ảnh | thêm emissive nhẹ, tăng hemisphere/directional, đổi màu đá |
+| Nạp đèn dùng khoảng cách 3D làm hụt bán kính 2 m trên cùng tầng | rà lại contract + test biên | XZ 2.0 m + chênh cao ≤ 1.5 m |
+| `validation.ts` ném `Error` thường nên test parse không bắt được `FormatError` | test parse đỏ | dùng chung `FormatError` |
+
+## Harness đã chỉnh
+
+- `AGENTS.md`: thêm bất biến v1.1 (3 Đêm, tầng, lướt, rơi, tạm dừng), lệnh `typecheck`, bản đồ file mới.
+- `docs/SPEC.md`: bảng AC1–AC28 cho từng mục Phần 3; giả định A1–A12 mới.
+- `docs/superpowers/specs/`: thiết kế Phase 2; `docs/superpowers/plans/`: kế hoạch 11 task.
+- `scripts/verify.mjs`: 24 case, kiểm tra shape v1.1 và hiệu năng.
+- `scripts/bot.ts`: bot v1.1 thắng Đêm 1, ghi bằng chứng phase-2.
+- `scripts/shots.mjs`: chụp 10 ảnh phase-2 ở 1280×720, in FPS và kiểm tra tick đứng yên khi tạm dừng.
+
+## Token và chi phí (ước tính)
+
+- Đầu vào tích luỹ: khoảng **150k–220k token** (đọc spec, code cũ, output test/verify/ảnh).
+- Đầu ra: khoảng **40k–55k token** (code, test, tài liệu).
+- Chi phí ước tính: dưới **1 USD** ở mức giá model dùng thử.
+
+## Retro Phase 2
+
+- **Hiệu quả**: giữ một lớp `Game`, đưa bản đồ vào dữ liệu; nhờ vậy ba Đêm dùng chung luật và test.
+- **Chưa tốt**: chỉnh sáng/địa hình Đêm 3 mất vài vòng ảnh; lẽ ra nên dựng camera cao + đèn mẫu trước.
+- **Nếu làm lại**: viết test địa hình + tick order trước cả renderer; đặt ngân sách thời gian cho phần nhìn.
+- **Bài học**: log ngắn trong bot (vị trí, threat, pulse) rẻ hơn nhiều so với đoán vì sao bot thua.

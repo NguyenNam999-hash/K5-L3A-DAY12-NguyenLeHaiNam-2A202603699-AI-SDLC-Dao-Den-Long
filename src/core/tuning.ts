@@ -1,51 +1,87 @@
-/** Single source of truth for gameplay numbers.
+/** Single source of truth for gameplay numbers (Contract v1.1).
  * `game.contract.json` must stay identical to this object (enforced by tests/contract.test.ts).
  */
 export const TUNING = {
   player_speed: 6,
-  carry_capacity: 5,
-  lantern_cost: 3,
+  carry_capacity: 10,
+  lantern_cost: 10,
   lantern_count_night1: 5,
-  pickup_radius: 1.5,
-  interact_radius: 3,
-  pulse_cost: 2,
-  pulse_radius: 8,
+  pickup_radius: 1,
+  interact_radius: 2,
+  pulse_cost: 3,
+  pulse_radius: 5,
   night1_duration_s: 300,
+  night2_duration_s: 330,
+  night3_duration_s: 360,
+  dash_speed: 14,
+  dash_duration_s: 0.2,
+  dash_cooldown_s: 1.5,
   flames: 3,
   invuln_s: 1.5,
-  hit_drop_ratio: 1,
-  pulse_stun_s: 3,
+  hit_drop_ratio: 0.5,
+  pulse_stun_s: 2,
   pulse_push_m: 4,
-  pulse_cooldown_s: 2,
-  safe_radius: 4,
-  shade_speed: 3.2,
+  pulse_cooldown_s: 3,
+  safe_radius: 6,
+  shade_speed: 4,
   shade_hit_radius: 1,
-  fall_enabled: false,
+  fall_enabled: true,
   score: {
     per_mote: 10,
     per_lantern: 100,
-    per_stun: 25,
-    per_second_left: 5,
+    per_stun: 5,
+    per_second_left: 2,
     per_flame_left: 50,
   },
 };
 
 export type Tuning = typeof TUNING;
 
-/** Island is a disc. `fall_enabled` is false, so this is a soft railing, not a cliff. */
-export const ISLAND_RADIUS = 34;
-
-/** Lantern ring of Night 1 (metres, ground plane XZ). */
-export const NIGHT1_LANTERNS: ReadonlyArray<{ id: string; x: number; z: number }> = [
-  { id: 'L1', x: 0, z: 15 },
-  { id: 'L2', x: 14.266, z: 4.635 },
-  { id: 'L3', x: 8.817, z: -12.135 },
-  { id: 'L4', x: -8.817, z: -12.135 },
-  { id: 'L5', x: -14.266, z: 4.635 },
-];
-
-export const MOTE_TARGET = 16;
-export const SHADE_CAP = 4;
-export const MOTE_SPAWN_INTERVAL_S = 3;
-export const SHADE_SPAWN_INTERVAL_S = 12;
+/** Fixed 1/60 s simulation step. */
 export const DT = 1 / 60;
+
+/**
+ * Physics and world constants that the contract does not pin. Keeping them out
+ * of `TUNING` means hidden contract checks never see extra keys.
+ */
+export const PHYSICS = {
+  jump_speed: 7,
+  gravity: 20,
+  ground_accel: 60,
+  air_control: 0.4,
+  step_height: 0.5,
+  fall_y: -10,
+  respawn_wait_ticks: 60,
+  spawn_invuln_ticks: 90,
+  mote_ttl_ticks: 480,
+  mote_cap: 30,
+  mote_initial: 20,
+  mote_spawn_start_tick: 240,
+  mote_spawn_interval_ticks: 240,
+  shade_spawn_start_tick: 300,
+  shade_spawning_ticks: 30,
+  shade_wander_speed: 2,
+  shade_detect_m: 12,
+  shade_lose_m: 18,
+  shade_recoil_ticks: 60,
+  shade_recoil_m: 2,
+  safe_suppress_ticks: 30,
+  drifter_cap: 2,
+  drifter_spawn_start_tick: 1200,
+  drifter_spawn_interval_ticks: 1200,
+  drifter_idle_speed: 2,
+  drifter_chase_speed: 7,
+  drifter_flee_speed: 7,
+  drifter_detect_m: 15,
+  drifter_steal_m: 1.2,
+  drifter_steal_count: 3,
+  drifter_flee_ticks: 240,
+  drifter_vanish_ticks: 120,
+  charm_ticks: 600,
+  charm_respawn_ticks: 2700,
+  charm_speed: 7.2,
+  wind_period_ticks: 1800,
+  wind_active_ticks: 300,
+  wind_warn_ticks: 120,
+  wind_push: 2,
+} as const;

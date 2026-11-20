@@ -1,10 +1,10 @@
-# Đảo Đèn Lồng — Phase 1
+# Đảo Đèn Lồng — Phase 2 "Ba hòn đảo"
 
 Game 3D góc nhìn thứ ba làm bằng **TypeScript + Three.js + Vite**, chạy trên macOS/Linux trong trình duyệt.
-Một màn chơi: **Đêm 1 — Đảo Bến**. Bạn là Mây, gom đom đóm để thắp lại 5 Đèn Lồng Lớn trước khi hết đêm,
-trong khi Bóng Mực đuổi theo trong sương đen.
+Ba Đêm nối tiếp: **Đảo Bến**, **Đảo Cau**, **Đảo Chuông**. Bạn là Mây, gom đom đóm để thắp lại các
+Đèn Lồng Lớn trước khi hết đêm, trong khi Bóng Mực đuổi theo trong sương đen.
 
-![Gameplay](evidence/phase-1/ui/03-lit-lanterns.png)
+![Gameplay](evidence/phase-2/ui/04-night1-lit.png)
 
 ## Chạy game (3 lệnh)
 
@@ -22,131 +22,159 @@ npm run dev
 |---|---|
 | `W A S D` | Di chuyển theo hướng camera |
 | Chuột (nhấp vào màn chơi để khóa) | Xoay camera |
-| `Space` | Nhảy (thuần hình ảnh, khoảng cách tính theo mặt phẳng XZ) |
-| `E` | Nạp ánh sáng vào Đèn Lồng Lớn gần nhất |
-| `F` | Tỏa sáng: làm choáng và đẩy Bóng Mực, tốn 2 ánh sáng |
+| `Space` | Nhảy (7 m/s, chỉ khi chạm đất) |
+| `Shift` | Lướt 14 m/s trong 0.2 s, hồi chiêu 1.5 s |
+| `Q` | Giữ để tạm dừng và nhìn từ trên cao (thả ra để chơi tiếp) |
+| `E` | Nạp ánh sáng vào Đèn Lồng Lớn gần nhất (10 đom đóm) |
+| `F` | Tỏa sáng: làm choáng và đẩy Bóng Mực, tốn 3 đom đóm |
 | `M` | Bật/tắt âm thanh |
-| `Esc` | Nhả chuột |
+| `P` / `Esc` | Tạm dừng: Tiếp tục · Chơi lại Đêm · Cài đặt · Về menu |
 
-Mục tiêu: thắp đủ **5 đèn** trước khi hết **300 giây**. Mỗi đèn cần **3 đom đóm**.
-Bóng Mực sợ vùng sáng quanh đèn đã thắp (bán kính 4 m). Bị chạm thì mất 1 ngọn lửa và rơi hết ánh sáng đang mang.
+## Ba Đêm
 
-## Chế độ headless (Test Contract v1.0)
+| Đêm | Đảo | Thời gian | Đèn | Đặc điểm |
+|---|---|---|---|---|
+| 1 | Đảo Bến | 300 s | 5 | Đảo tròn bán kính 40 m, rơi khỏi mép |
+| 2 | Đảo Cau | 330 s | 6 | Hai đảo nối bằng cầu tre, 2 bục nhảy, Bùa Gió, Gió Lạc |
+| 3 | Đảo Chuông | 360 s | 7 | Ba tầng, 2 dốc, tháp chuông, gió mạnh, 2 Bùa Gió |
+
+Mỗi đèn cần **10 đom đóm**, nạp được nhiều lần. Bóng Mực sợ vùng sáng bán kính 6 m quanh đèn đã thắp.
+Bị chạm mất 1 Ngọn Lửa, rơi nửa số đom đóm, bất tử 1.5 s. Rơi khỏi đảo mất hết đom đóm và hồi sinh sau
+1 s. Hết 3 Ngọn Lửa hoặc hết đêm khi đèn chưa sáng hết là thua. Thắng cả ba Đêm để xem Bình Minh và
+tổng điểm chiến dịch.
+
+## Chế độ headless (Test Contract v1.1)
 
 ```bash
 node dist-node/headless/main.js --seed 7 --night 1 --ticks 600 --out out.jsonl
-node dist-node/headless/main.js --seed 3 --night 1 --ticks 120 \
-  --scenario tests/scenarios/03-deposit.json \
-  --inputs tests/scenarios/03-deposit.inputs.json \
-  --out deposit.jsonl --snapshot-every 10
+node dist-node/headless/main.js --seed 3 --night 2 --ticks 120 \
+  --scenario tests/scenarios/16-jump-pad.json --out pad.jsonl --snapshot-every 10
+node dist-node/headless/main.js --seed 5 --night 3 --ticks 21600 --out night3.jsonl
 ```
 
 - Logic chạy đúng 60 tick/giây, không GPU, không cửa sổ.
 - Đầu ra JSONL: `snapshot` (tick 0 rồi mỗi `--snapshot-every`), `event` ngay khi xảy ra, dòng cuối `end`.
 - File scenario/inputs sai định dạng: thoát mã **2**, lỗi ra `stderr`. Lỗi CLI: mã **1**.
-- Cùng seed + scenario + inputs cho ra file giống hệt nhau (đã kiểm chứng bằng so sánh byte).
+- Cùng seed + scenario + inputs cho ra file giống hệt nhau (kiểm chứng byte).
+- Full Đêm 3 (21 600 tick) chạy ~0.15 s, dưới giới hạn 30 s.
 
-`game.contract.json` ở gốc repo khai toàn bộ tuning. Test `tests/contract.test.ts` chặn việc file này lệch khỏi
-`src/core/tuning.ts`.
+`game.contract.json` ở gốc repo khai toàn bộ tuning v1.1. Test `tests/contract.test.ts` chặn việc file
+này lệch khỏi `src/core/tuning.ts`.
 
 ### Các con số tuning
 
 | Tham số | Giá trị | Ghi chú |
 |---|---|---|
-| `player_speed` | 6 m/s | |
-| `carry_capacity` | 5 | |
-| `lantern_cost` | 3 | đom đóm mỗi đèn |
-| `pickup_radius` | 1.5 m | |
-| `interact_radius` | 3 m | |
-| `pulse_cost` | 2 | ánh sáng đang mang |
-| `pulse_radius` | 8 m | |
-| `night1_duration_s` | 300 | |
-| `flames` | 3 | máu |
-| `invuln_s` | 1.5 | bất tử sau khi bị chạm |
-| `hit_drop_ratio` | 1 | rơi **toàn bộ** đom đóm đang mang |
-| `pulse_stun_s` | 3 | |
-| `pulse_push_m` | 4 | |
-| `pulse_cooldown_s` | 2 | |
-| `safe_radius` | 4 | quanh mỗi đèn đã thắp |
-| `shade_speed` | 3.2 m/s | |
-| `shade_hit_radius` | 1 m | |
-| `fall_enabled` | false | không có rơi khỏi đảo; xem giả định A1 |
+| `player_speed` | 6 m/s | tăng/giảm tốc trong 0.1 s |
+| `carry_capacity` | 10 | |
+| `lantern_cost` | 10 | đom đóm mỗi đèn |
+| `pickup_radius` | 1.0 m | XZ, chênh cao ≤ 1.5 m |
+| `interact_radius` | 2.0 m | XZ, cùng tầng (chênh cao ≤ 1.5 m) |
+| `pulse_cost` | 3 | |
+| `pulse_radius` | 5 m | khoảng cách 3D tới tâm Bóng Mực |
+| `dash_speed` / `dash_duration_s` / `dash_cooldown_s` | 14 m/s / 0.2 s / 1.5 s | |
+| `night1_duration_s` / `night2_duration_s` / `night3_duration_s` | 300 / 330 / 360 | |
+| `flames` | 3 | hồi đầy mỗi Đêm |
+| `invuln_s` | 1.5 | 90 tick |
+| `hit_drop_ratio` | 0.5 | rơi `floor(mang / 2)` |
+| `pulse_stun_s` | 2 | 120 tick |
+| `pulse_push_m` | 4 | trong 15 tick đầu |
+| `pulse_cooldown_s` | 3 | |
+| `safe_radius` | 6 | quanh mỗi đèn đã thắp |
+| `shade_speed` | 4.0 m/s | Đêm 3: 4.5 m/s |
+| `shade_hit_radius` | 1.0 m | XZ, chênh cao ≤ 1.5 m |
+| `fall_enabled` | true | rơi khỏi đảo |
+
+Ngoài contract (trong `PHYSICS`): nhảy 7 m/s, trọng lực 20 m/s², gia tốc mặt đất 60 m/s², điều khiển
+trên không 40%, trần đom đóm 30, TTL đom rơi 480 tick, Bùa Gió 600 tick, respawn 2700 tick.
 
 ## Cách tính điểm
 
 | Sự kiện | Điểm |
 |---|---|
-| Nhặt 1 đom đóm | +10 |
+| Nạp 1 đom đóm vào đèn | +10 |
 | Thắp 1 đèn | +100 |
-| Làm choáng 1 Bóng Mực | +25 |
-| Mỗi giây còn lại khi **thắng** | +5 |
-| Mỗi ngọn lửa còn lại khi kết thúc | +50 |
+| Mỗi Bóng Mực trúng Tỏa Sáng (kể cả đang choáng) | +5 |
+| Khi thắng: mỗi giây còn lại | +2 |
+| Khi thắng: mỗi Ngọn Lửa còn lại | +50 |
 
-Điểm trong snapshot giữa màn = điểm sự kiện (đom đóm, đèn, choáng). Hai khoản thưởng cuối màn chỉ cộng một lần
-lúc `game_over`. Thưởng thời gian chỉ trả khi thắng, để thua sớm không được điểm cao.
+Điểm trong snapshot giữa màn là điểm sự kiện. Hai khoản thưởng cuối màn chỉ cộng khi **thắng**.
+Tổng điểm chiến dịch = tổng điểm các Đêm đã thắng.
 
-Ví dụ thật (bot thắng, xem `docs/EVIDENCE.md`):
-`39 đom đóm × 10 + 5 đèn × 100 + 31 lần choáng × 25 + 1 060 (thời gian) + 1 lửa × 50 = 2 775`.
+Ví dụ thật (bot thắng Đêm 1, xem `evidence/phase-2/headless/bot-summary.json`):
+`50 đom đóm × 10 + 5 đèn × 100 + 6 lần choáng × 5 + 76 giây × 2 + 3 lửa × 50 = 1 332`.
 
-## Giả định cho chỗ PRD-0 còn mơ hồ
+## Giả định cho chỗ PHASE-2 còn mơ hồ
 
 | # | Giả định |
 |---|---|
-| A1 | `fall_enabled = false`. Đảo là đĩa bán kính 34 m; người chơi bị chặn mềm ở mép, không có sự kiện rơi. |
-| A2 | Nạp đèn chỉ lấy **phần còn thiếu** (`lantern_cost − deposited`), tối đa bằng số đang mang; nạp một phần được giữ lại. |
-| A3 | Tỏa sáng cần đủ 2 ánh sáng, trừ ngay khi bấm, luôn phát sự kiện `pulse` (kể cả `stunned_ids: []`). |
-| A4 | Bị chạm rơi **toàn bộ** đom đóm đang mang (`hit_drop_ratio = 1`); số đom đóm rơi tan vào sương, không nhặt lại. |
-| A5 | Nhảy chỉ đổi độ cao hiển thị. Mọi khoảng cách tính trên mặt phẳng XZ đúng như contract. |
-| A6 | Bóng Mực luôn đuổi (`chase`); sau pulse thành `stunned` rồi trở lại `chase`. Chúng bị đẩy ra khỏi vùng `safe_radius` của đèn đã thắp và không thể gây sát thương khi ở trong vùng đó. |
-| A7 | Thắng khi cả 5 đèn sáng (`all_lit`). Thua khi hết lửa (`no_flames`) hoặc hết đêm (`dawn`). |
-| A8 | Thời gian hết mà đèn chưa sáng hết = thua `dawn` (bình minh đến khi đảo còn tối). |
-| A9 | Đèn đặt sẵn `lit: true` trong scenario không cộng điểm và không phát sự kiện. |
-| A10 | Ngoài contract: đom đóm sinh thêm mỗi 3 s (tối đa 16 con), Bóng Mực sinh thêm mỗi 12 s (tối đa 4 con), khởi đầu 12 đom đóm và 2 Bóng Mực cách xa người chơi 24–32 m. |
-| A11 | Id tự sinh: `M1…` cho đom đóm, `S1…` cho Bóng Mực; scenario tự đánh số theo thứ tự khai báo. |
-| A12 | `cam_yaw_deg` do người chơi điều khiển bằng chuột ở chế độ có giao diện; headless lấy đúng từ file inputs. |
+| A1 | Điểm đom đóm cộng lúc **nạp** vào đèn, đúng chữ "nạp" của Contract v1.1. |
+| A2 | Hướng mặt ban đầu theo hướng xuất phát của Đêm (+Z); sau đó là hướng di chuyển gần nhất. |
+| A3 | Điều khiển trên không = 40% gia tốc mặt đất; lướt trên không giữ nguyên độ cao. |
+| A4 | Tâm Bóng Mực ở `groundHeight + 1.0`; Gió Lạc ở `groundHeight + 1.6`. |
+| A5 | Vùng an toàn và phát hiện Bóng Mực dùng XZ, chỉ tính khi cùng tầng (chênh cao ≤ 2 m). |
+| A6 | Bóng Mực `spawning` 30 tick, `wander` 2 m/s; recoil 60 tick đẩy 2 m. |
+| A7 | Gió mạnh bắt đầu ở giây 30, 60, …; cảnh báo từ giây 28; hướng RNG mỗi cơn. |
+| A8 | Đèn và đom đóm cùng tầng mới tương tác được; nạp xuyên tầng bị chặn. |
+| A9 | Đom đóm rơi nhặt lại được từ tick sau, TTL 480 tick; rơi khỏi đảo thì mất hẳn. |
+| A10 | Tạm dừng trong trình duyệt ngừng gọi `step()`; lõi vẫn hỗ trợ input `pause` cho headless. |
+| A11 | `fall_enabled` giữ trong contract với giá trị `true`; hằng số vật lý ngoài contract không vào JSON. |
+| A12 | Bot dùng cùng luật chuẩn, không chỉnh tuning, không dùng scenario riêng khi chơi. |
+| A13 | Giữ `Q` ≥ 180 ms khi đang chơi thì ngừng gọi `step()` và nhìn từ trên cao; thả `Q` để chơi tiếp. Nạp ánh sáng dùng `E`; headless không đổi. |
 
 ## Sáng tạo của tôi
 
-Phần thêm nằm ngoài lõi hoặc chỉ dùng đúng các tham số contract, nên đầu ra headless không đổi:
+Phần thêm nằm ngoài lõi hoặc chỉ đọc trạng thái, nên đầu ra headless không đổi:
 
-- **Đảo sáng dần**: cường độ ambient, sương và màu trời ấm lên theo số đèn đã thắp (chỉ renderer).
-- **Vùng an toàn nhìn thấy được**: đĩa sáng quanh đèn đã thắp đúng bằng `safe_radius`, giúp người chơi hiểu vì sao Bóng Mực không vào.
-- **Hiệu ứng**: vòng pulse lan tỏa, nhấp nháy bất tử, Bóng Mực có mắt và 4 vệt sương xoay, đom đóm lơ lửng.
-- **Âm thanh procedural** bằng Web Audio (nhặt, nạp, thắp đèn, pulse, thắng/thua). Tắt hoàn toàn khi headless.
-- **HUD có gợi ý theo ngữ cảnh**: còn thiếu bao nhiêu đom đóm, cooldown pulse, đồng hồ đổi màu khi còn dưới 60 giây.
-- **Bot chơi tự động** (`npm run bot`) tạo file inputs; file này chạy lại qua CLI chính thức và thắng Đêm 1 — vừa là bằng chứng "chơi được tới thắng", vừa là test hồi quy.
-- **Màn kết quả** hiển thị bảng điểm chi tiết theo từng nguồn điểm.
+- **Ba hòn đảo dựng hoàn toàn bằng code**: cầu tre, ba tầng, dốc, bục nhảy phát sáng, tháp chuông.
+- **Đảo sáng dần**: ambient, sương và màu trời ấm lên theo số đèn đã thắp (đúng công thức Phần 3.8).
+- **Vùng an toàn nhìn thấy được**: vòng sáng quanh đèn đã thắp đúng bán kính 6 m.
+- **Hiệu ứng**: vòng pulse lan tỏa, bất tử nhấp nháy, Bóng Mực có mắt và 4 vệt sương, Gió Lạc là dải lụa
+  xám xanh, Bùa Gió đỏ viền vàng, lá bay khi gió mạnh, đom đóm rơi khác màu.
+- **Âm thanh procedural** bằng Web Audio: nhạc nền đổi theo Đêm, hiệu ứng nhặt/nạp/thắp/pulse/bị đánh/
+  nhảy/lướt/Bùa Gió/Gió Lạc/Bóng Mực xuất hiện/đếm ngược/thắng/thua.
+- **HUD đầy đủ**: lửa, đồng hồ `mm:ss` đỏ ≤ 30 s, đèn k/n + điểm, thanh 10 ô, hồi chiêu Lướt/Tỏa Sáng,
+  nhắc `E — Nạp ánh sáng (x/10)`, mũi tên chỉ đèn ngoài màn hình, nhãn gió và Bùa Gió.
+- **Giữ `Q` để xem từ trên cao**: đồng hồ game đứng yên, camera bay lên 40 m và nhìn thẳng xuống
+  người chơi để đọc bố cục đảo, đèn và Bóng Mực; thả phím là chơi tiếp đúng nhịp cũ.
+- **Chiến dịch 3 Đêm** với menu, màn giới thiệu lời Ông Đăng, màn kết quả từng Đêm, Bình Minh và tổng điểm.
+- **Tạm dừng bằng chuột** (`P`/`Esc`) có Tiếp tục / Chơi lại Đêm / Cài đặt / Về menu; cài đặt âm lượng và
+  độ nhạy chuột lưu trong `localStorage`.
+- **Mini-map v1.1**: vẽ hình đảo/cầu/tầng, đom đóm, Bóng Mực, Gió Lạc, Bùa Gió, vùng an toàn, hướng gió.
+- **Bot chơi tự động** (`npm run bot`) thắng Đêm 1 với số chuẩn và tạo inputs replay được qua CLI.
 
-Bằng chứng phần cũ vẫn đúng sau khi thêm: 44 unit test và 10 kiểm tra contract đều đạt; `game.contract.json`
-không đổi; output headless vẫn đúng định dạng và tất định.
+Ảnh minh họa: `evidence/phase-2/ui/01-menu.png` (menu), `02-intro-night1.png` (giới thiệu),
+`04-night1-lit.png` (Đêm 1), `04b-overview.png` (giữ `E` nhìn từ trên cao), `05-pause.png` (tạm dừng),
+`06-settings.png` (cài đặt), `08-night2-bridge.png` (Đêm 2), `09-night3.png` (Đêm 3),
+`10-sunrise.png` (Bình Minh).
 
 ## Cấu trúc
 
 ```
-src/core/        logic game thuần, không DOM: tuning, rng, scenario, game, input-track
+src/core/        logic game thuần: tuning, physics, rng, scenario, nights, terrain, game, input-track
 src/headless/    CLI đọc tham số, scenario, inputs và ghi JSONL
-src/render/      Three.js: scene, HUD, âm thanh, vòng lặp 60 Hz cố định
-tests/           unit test + scenario mẫu
-scripts/         verify.mjs (kiểm tra contract), bot.ts (chơi tự động), shots.mjs (ảnh UI)
-evidence/        bằng chứng: JSONL, báo cáo, ảnh chụp
-docs/            SPEC, EVIDENCE, AI-LOG
+src/render/      Three.js: world theo Đêm, HUD, mini-map, cài đặt, âm thanh, chiến dịch 60 Hz
+tests/           unit test + scenario mẫu cho từng tính năng
+scripts/         verify.mjs (24 kiểm tra), bot.ts (chơi tự động), shots.mjs (ảnh UI)
+evidence/        bằng chứng phase-1 và phase-2
+docs/            SPEC, EVIDENCE, AI-LOG, thiết kế + kế hoạch phase-2
 ```
 
 ## Kiểm chứng
 
 ```bash
-npm test          # 44 unit test
+npm test          # 78 unit test
 npm run build
-npm run verify    # 10 kiểm tra contract trên CLI đã build
-npm run bot       # bot chơi và ghi evidence/phase-1/headless/bot-inputs.json
+npm run verify    # 24 kiểm tra contract trên CLI đã build
+npm run bot       # bot thắng Đêm 1, ghi evidence/phase-2/headless/bot-inputs.json
 ```
 
-Kết quả và cách đọc: [docs/EVIDENCE.md](docs/EVIDENCE.md). Yêu cầu → tiêu chí nghiệm thu: [docs/SPEC.md](docs/SPEC.md).
-Nhật ký dùng AI và retro: [docs/AI-LOG.md](docs/AI-LOG.md).
+Kết quả và cách đọc: [docs/EVIDENCE.md](docs/EVIDENCE.md). Yêu cầu → tiêu chí nghiệm thu:
+[docs/SPEC.md](docs/SPEC.md). Nhật ký dùng AI và retro: [docs/AI-LOG.md](docs/AI-LOG.md).
 
 ## Tài liệu của lab
 
-Yêu cầu gốc và hướng dẫn lab vẫn giữ trong repo: [PHASE-1.md](PHASE-1.md), [GUIDE.md](GUIDE.md),
+Yêu cầu gốc và hướng dẫn lab vẫn giữ trong repo: [docs/phase/PHASE-1.md](docs/phase/PHASE-1.md), [GUIDE.md](GUIDE.md),
 [CHECKPOINTS.md](CHECKPOINTS.md), [RUBRIC.md](RUBRIC.md), [RULES.md](RULES.md), [SUBMISSION.md](SUBMISSION.md).
 
 ## Giấy phép và nguồn
