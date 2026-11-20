@@ -1,6 +1,7 @@
 import './styles.css';
 import * as THREE from 'three';
 import { Game } from '../core/game';
+import { validateName, type LeaderboardEntry } from '../core/leaderboard';
 import { DT, TUNING } from '../core/tuning';
 import { groundHeight, isSolid } from '../core/terrain';
 import type { InputFrame, NightId, Shade } from '../core/types';
@@ -9,6 +10,7 @@ import { Alerts } from './alerts';
 import { Hud } from './hud';
 import { ACTIONS, formatCode, type Action } from './keybinds';
 import { Minimap } from './minimap';
+import { LeaderboardStore } from './leaderboard-store';
 import { DIFFICULTIES, Settings } from './settings';
 import { createWorld, type World } from './world';
 
@@ -37,6 +39,15 @@ const minimap = new Minimap(minimapCanvas);
 const alerts = new Alerts();
 const alertFeed = document.querySelector<HTMLDivElement>('#alert-feed')!;
 const shadeArrow = document.querySelector<HTMLDivElement>('#shade-arrow')!;
+const leaderboardScreen = document.querySelector<HTMLDivElement>('#leaderboard-screen')!;
+const leaderboardTable = document.querySelector<HTMLDivElement>('#leaderboard-table')!;
+const scoreForm = document.querySelector<HTMLDivElement>('#score-form')!;
+const scoreSummary = document.querySelector<HTMLParagraphElement>('#score-summary')!;
+const scoreError = document.querySelector<HTMLParagraphElement>('#score-error')!;
+const playerName = document.querySelector<HTMLInputElement>('#player-name')!;
+const saveScoreBtn = document.querySelector<HTMLButtonElement>('#save-score-btn')!;
+const resultLeaderboard = document.querySelector<HTMLDivElement>('#result-leaderboard')!;
+const store = new LeaderboardStore();
 const lowFuelSeen = new Set<string>();
 let lastAlertKey = '';
 const settings = new Settings(audio);
@@ -155,6 +166,7 @@ function hideOverlays(): void {
   menuScreen.hidden = true;
   introScreen.hidden = true;
   pauseScreen.hidden = true;
+  leaderboardScreen.hidden = true;
   hud.hideOverlay();
 }
 
@@ -492,6 +504,89 @@ function updateCamera(dt: number): void {
   camera.lookAt(lookTarget);
 }
 
+function nightsWon(): number {
+  return ([1, 2, 3] as NightId[]).filter((night) => nightScores[night] > 0).length;
+}
+
+function renderLeaderboard(container: HTMLDivElement, entries: LeaderboardEntry[]): void {
+  if (entries.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'fineprint';
+    empty.textContent = 'Chưa có điểm nào. Chơi một Đêm và lưu tên.';
+    container.replaceChildren(empty);
+    return;
+  }
+  const header = document.createElement('div');
+  header.className = 'leaderboard-row head';
+  for (const text of ['#', 'Tên', 'Điểm', 'Đêm', 'Lúc']) {
+    const cell = document.createElement('span');
+    cell.textContent = text;
+    header.append(cell);
+  }
+  const rows = entries.map((entry, index) => {
+    const row = document.createElement('div');
+    row.className = 'leaderboard-row';
+    const date = new Date(entry.achieved_at);
+    const when = Number.isNaN(date.getTime())
+      ? entry.achieved_at
+      : date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    for (const text of [String(index + 1), entry.name, entry.score.toLocaleString('en-US'), String(entry.nights_won), when]) {
+      const cell = document.createElement('span');
+      cell.textContent = text;
+      row.append(cell);
+    }
+    return row;
+  });
+  container.replaceChildren(header, ...rows);
+}
+
+function openLeaderboard(): void {
+  hideOverlays();
+  leaderboardScreen.hidden = false;
+  void store.load().then((entries) => renderLeaderboard(leaderboardTable, entries));
+}
+
+function closeLeaderboard(): void {
+  leaderboardScreen.hidden = true;
+  menuScreen.hidden = false;
+}
+
+function showScoreForm(): void {
+  scoreForm.hidden = false;
+  scoreForm.dataset.saved = '';
+  scoreSummary.textContent = `${totalScore.toLocaleString('en-US')} điểm · ${nightsWon()}/3 Đêm thắng`;
+  playerName.disabled = false;
+  playerName.value = '';
+  saveScoreBtn.hidden = false;
+  saveScoreBtn.disabled = false;
+  scoreError.hidden = true;
+  resultLeaderboard.replaceChildren();
+}
+
+function hideScoreForm(): void {
+  scoreForm.hidden = true;
+}
+
+async function saveScore(): Promise<void> {
+  const name = validateName(playerName.value);
+  if (!name) {
+    scoreError.textContent = 'Tên phải dài 3–12 ký tự, chỉ gồm A–Z, a–z, 0–9 và dấu _.';
+    scoreError.hidden = false;
+    return;
+  }
+  saveScoreBtn.disabled = true;
+  const entries = await store.submit({
+    name,
+    score: totalScore,
+    nights_won: nightsWon(),
+    achieved_at: new Date().toISOString(),
+    seed: baseSeed,
+  });
+  scoreForm.dataset.saved = '1';
+  scoreError.hidden = true;
+  renderLeaderboard(resultLeaderboard, entries);
+}
+
 function scheduleResult(): void {
   if (resultScheduled) return;
   resultScheduled = true;
@@ -504,6 +599,8 @@ function scheduleResult(): void {
     nightScores[currentNight] = won ? game.score : 0;
     totalScore = nightScores[1] + nightScores[2] + nightScores[3];
     hud.showResult(game, currentNight, totalScore, won && currentNight === 3);
+    if (won) hideScoreForm();
+    else showScoreForm();
   }, 900);
 }
 
@@ -586,6 +683,11 @@ window.addEventListener('keydown', (event) => {
     return;
   }
 
+  if (!leaderboardScreen.hidden) {
+    if (event.code === code('pause') || event.code === 'Escape') closeLeaderboard();
+    return;
+  }
+
   if (event.code === code('pause') || event.code === 'Escape') {
     if (!document.querySelector<HTMLDivElement>('#settings')!.hidden) {
       settings.hide();
@@ -652,7 +754,13 @@ window.addEventListener('mousemove', (event) => {
 // --- Buttons / campaign ---
 
 document.querySelector<HTMLButtonElement>('#campaign-btn')!.addEventListener('click', () => startCampaign());
+document.querySelector<HTMLButtonElement>('#leaderboard-btn')!.addEventListener('click', () => openLeaderboard());
+document.querySelector<HTMLButtonElement>('#leaderboard-back')!.addEventListener('click', () => closeLeaderboard());
 document.querySelector<HTMLButtonElement>('#menu-settings-btn')!.addEventListener('click', () => openSettings('menu'));
+saveScoreBtn.addEventListener('click', () => void saveScore());
+playerName.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') void saveScore();
+});
 document.querySelector<HTMLButtonElement>('#intro-btn')!.addEventListener('click', () => beginPlay());
 document.querySelector<HTMLButtonElement>('#resume-btn')!.addEventListener('click', () => closePause());
 document.querySelector<HTMLButtonElement>('#retry-night-btn')!.addEventListener('click', () => retryNight());
@@ -663,8 +771,10 @@ document.querySelector<HTMLButtonElement>('#continue-btn')!.addEventListener('cl
   if (currentNight === 3) {
     phase = 'sunrise';
     hud.showSunrise(totalScore);
+    showScoreForm();
     audio.stopMusic();
   } else {
+    hideScoreForm();
     showIntro((currentNight + 1) as NightId);
   }
 });

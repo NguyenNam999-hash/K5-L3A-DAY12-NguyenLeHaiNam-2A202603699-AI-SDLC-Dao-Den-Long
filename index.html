@@ -88,6 +88,7 @@
           </ul>
           <div class="button-row">
             <button id="campaign-btn" class="btn primary" type="button">Bắt đầu hành trình</button>
+            <button id="leaderboard-btn" class="btn ghost" type="button">Bảng xếp hạng</button>
             <button id="menu-settings-btn" class="btn ghost" type="button">Cài đặt</button>
           </div>
           <p class="fineprint">Nhấp vào màn chơi để khóa chuột · P hoặc Esc để tạm dừng</p>
@@ -209,6 +210,16 @@
         </div>
       </div>
 
+      <div id="leaderboard-screen" class="overlay" hidden>
+        <div class="card leaderboard-card">
+          <p class="eyebrow">Bảng xếp hạng</p>
+          <h1>Top 10 trên máy này</h1>
+          <p class="story">Điểm là tổng các Đêm đã thắng. Bằng điểm thì mục đạt trước đứng trên.</p>
+          <div id="leaderboard-table" class="leaderboard-list"></div>
+          <button id="leaderboard-back" class="btn primary" type="button">Quay lại</button>
+        </div>
+      </div>
+
       <div id="overlay" class="overlay" hidden>
         <div class="card">
           <p class="eyebrow" id="overlay-eyebrow">Kết thúc</p>
@@ -216,6 +227,16 @@
           <p class="story" id="overlay-reason"></p>
           <div class="score-big"><span id="overlay-score">0</span><small>điểm</small></div>
           <div id="overlay-breakdown" class="breakdown"></div>
+          <div id="score-form" class="score-form" hidden>
+            <p class="score-form-title">Lưu điểm vào Bảng xếp hạng</p>
+            <p id="score-summary" class="fineprint"></p>
+            <div class="score-form-row">
+              <input id="player-name" maxlength="12" placeholder="Tên 3–12 ký tự" aria-label="Tên người chơi" autocomplete="off" />
+              <button id="save-score-btn" class="btn primary" type="button">Lưu điểm</button>
+            </div>
+            <p id="score-error" class="keybind-error" role="alert" hidden></p>
+            <div id="result-leaderboard" class="leaderboard-list"></div>
+          </div>
           <div class="button-row">
             <button id="continue-btn" class="btn primary" type="button">Đêm kế tiếp</button>
             <button id="retry-btn" class="btn primary" type="button">Chơi lại Đêm</button>
