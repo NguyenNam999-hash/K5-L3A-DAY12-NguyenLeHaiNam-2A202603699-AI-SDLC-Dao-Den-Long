@@ -27,7 +27,7 @@ Nếu chỉ có thư mục `dist/`, phục vụ tĩnh bằng bất kỳ web serv
 
 ## Bằng chứng
 
-- 134 unit test, 35 kiểm tra contract.
+- 135 unit test, 35 kiểm tra contract.
 - Benchmark trên Apple M1 Pro: 217.95 fps trung bình, p1 158.77, load 1230 ms, p95 5.3 ms.
 - Soak 10 Đêm: 0 crash, RSS 56 → 63 MB.
 

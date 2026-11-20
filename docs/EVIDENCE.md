@@ -231,7 +231,7 @@ node scripts/shots-phase4.mjs
 
 | Hạng mục | Kết quả | Ngưỡng | File |
 |---|---|---|---|
-| Unit test | **134 / 134** trong 13 file | tất cả xanh | `npm test` |
+| Unit test | **135 / 135** trong 14 file | tất cả xanh | `npm test` |
 | Contract verify | **35 kiểm tra**, 0 lỗi | 0 lỗi | `evidence/phase-4/headless/verify-report.txt` |
 | Benchmark | `avg_fps 217.95`, `p1_low_fps 158.77`, `p95 5.3 ms`, `load_ms 1230`, `frames 6539`, `peak_mem 1224 MB` | 60 / 30 / ≤10 000 | `bench.json`, `evidence/phase-4/bench.json` |
 | Soak | 10 Đêm, `crashes 0`, RSS `56 → 63 MB` (1.13×), 0.3 s | 0 crash, ≤1.2× | `soak.json`, `evidence/phase-4/soak.json` |
