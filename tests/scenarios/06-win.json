@@ -1,9 +1,10 @@
 {
   "random_motes": false,
   "random_shades": false,
-  "player": { "pos": [0, 0, 15.5], "carried": 3 },
+  "random_drifters": false,
+  "player": { "pos": [0, 0, 14.5], "carried": 1 },
   "lanterns": [
-    { "id": "L1", "pos": [0, 0, 15] },
+    { "id": "L1", "pos": [0, 0, 15], "deposited": 9 },
     { "id": "L2", "lit": true },
     { "id": "L3", "lit": true },
     { "id": "L4", "lit": true },

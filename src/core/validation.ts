@@ -1,7 +1,9 @@
+import { FormatError } from './scenario';
+
 export type Vec3 = [number, number, number];
 
 export function fail(path: string, expected: string): never {
-  throw new Error(`${path}: ${expected}`);
+  throw new FormatError(`${path}: ${expected}`);
 }
 
 export function isObject(v: unknown): v is Record<string, unknown> {
