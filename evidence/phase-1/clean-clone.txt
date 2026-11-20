@@ -1,4 +1,4 @@
-# Clean-clone check of tag phase-1 (commit 8970f32)
+# Clean-clone check of tag phase-1
 
 $ npm ci
 
