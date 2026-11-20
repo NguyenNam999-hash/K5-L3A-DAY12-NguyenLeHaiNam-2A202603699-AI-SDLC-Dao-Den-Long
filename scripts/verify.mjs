@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * Contract verification for Phase 3 (Contract v1.2). Runs the built headless CLI on
- * fixed scenarios and checks output shape, rules, determinism and performance.
+ * Contract verification for Phase 4 (Contract v1.3). Runs the built headless CLI,
+ * soak runner, leaderboard export and asset checks.
  *
  * Usage: npm run build && node scripts/verify.mjs
  */
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.cwd();
-const outDir = join(root, 'evidence/phase-3/headless');
+const outDir = join(root, 'evidence/phase-4/headless');
 mkdirSync(outDir, { recursive: true });
 
 const CLI = 'dist-node/headless/main.js';
@@ -361,8 +361,120 @@ check(perf.status === 0, '24-performance', `exit ${perf.status}: ${perf.stderr}`
 check(elapsedMs <= 30000, '24-performance', `full night took ${elapsedMs} ms`);
 console.log(elapsedMs <= 30000 ? `PASS 24-performance (${elapsedMs} ms)` : `FAIL 24-performance (${elapsedMs} ms)`);
 
+// ---------------------------------------------------------------- Phase 4
+
+// 25: contract v1.3 and the new commands.
+const contract = JSON.parse(readFileSync(join(root, 'game.contract.json'), 'utf8'));
+const contractOk =
+  contract.contract_version === '1.3' &&
+  typeof contract.bench_cmd === 'string' &&
+  contract.bench_cmd.includes('bench') &&
+  typeof contract.soak_cmd === 'string' &&
+  contract.soak_cmd.includes('soak') &&
+  typeof contract.run_cmd === 'string' &&
+  contract.run_cmd.includes('app.js');
+check(contractOk, '30-contract-v1.3', 'contract_version/bench_cmd/soak_cmd/run_cmd mismatch');
+console.log(contractOk ? 'PASS 30-contract-v1.3' : 'FAIL 30-contract-v1.3');
+
+// 26: soak smoke run (2 nights) has the documented shape and no crash.
+const soakOut = join(root, 'evidence/phase-4/soak-smoke.json');
+const soak = spawnSync('node', ['dist-node/headless/soak.js', '--seed', '7', '--nights', '2', '--out', soakOut], {
+  encoding: 'utf8',
+});
+let soakReport = null;
+try {
+  soakReport = JSON.parse(readFileSync(soakOut, 'utf8'));
+} catch {
+  soakReport = null;
+}
+const soakKeys = ['nights', 'crashes', 'results', 'mem_start_mb', 'mem_end_mb', 'duration_s'];
+const soakOk =
+  soak.status === 0 &&
+  soakReport !== null &&
+  soakKeys.every((key) => key in soakReport) &&
+  soakReport.nights === 2 &&
+  soakReport.results.length === 2 &&
+  soakReport.crashes === 0 &&
+  soakReport.mem_end_mb <= soakReport.mem_start_mb * 1.2;
+check(soakOk, '31-soak', `exit ${soak.status}, report ${JSON.stringify(soakReport)}`);
+console.log(soakOk ? 'PASS 31-soak' : 'FAIL 31-soak');
+
+// 27: leaderboard export writes the exact shape in score order.
+const lbInput = join(root, 'evidence/phase-4/leaderboard-input.json');
+const lbOut = join(root, 'evidence/phase-4/leaderboard-export.json');
+writeFileSync(
+  lbInput,
+  JSON.stringify({
+    entries: [
+      { name: 'Low_01', score: 100, nights_won: 1, achieved_at: '2026-11-20T10:00:00+07:00', seed: 7 },
+      { name: 'High_01', score: 900, nights_won: 3, achieved_at: '2026-11-20T11:00:00+07:00', seed: 7 },
+    ],
+  }),
+);
+const exported = spawnSync('node', ['dist-node/app.js', '--export-leaderboard', lbOut, '--data', lbInput], {
+  encoding: 'utf8',
+});
+let exportJson = null;
+try {
+  exportJson = JSON.parse(readFileSync(lbOut, 'utf8'));
+} catch {
+  exportJson = null;
+}
+const exportOk =
+  exported.status === 0 &&
+  exportJson !== null &&
+  Array.isArray(exportJson.entries) &&
+  exportJson.entries.length === 2 &&
+  exportJson.entries[0].name === 'High_01' &&
+  exportJson.entries[1].name === 'Low_01';
+check(exportOk, '32-leaderboard-export', `exit ${exported.status}, file ${JSON.stringify(exportJson)}`);
+console.log(exportOk ? 'PASS 32-leaderboard-export' : 'FAIL 32-leaderboard-export');
+
+// 28: a corrupt leaderboard file exports as an empty list, never crashes.
+const corruptInput = join(root, 'evidence/phase-4/leaderboard-corrupt.json');
+const corruptOut = join(root, 'evidence/phase-4/leaderboard-corrupt-export.json');
+writeFileSync(corruptInput, '{ not json');
+const corruptRun = spawnSync('node', ['dist-node/app.js', '--export-leaderboard', corruptOut, '--data', corruptInput], {
+  encoding: 'utf8',
+});
+let corruptJson = null;
+try {
+  corruptJson = JSON.parse(readFileSync(corruptOut, 'utf8'));
+} catch {
+  corruptJson = null;
+}
+const corruptOk = corruptRun.status === 0 && corruptJson !== null && Array.isArray(corruptJson.entries) && corruptJson.entries.length === 0;
+check(corruptOk, '33-leaderboard-corrupt', `exit ${corruptRun.status}, file ${JSON.stringify(corruptJson)}`);
+console.log(corruptOk ? 'PASS 33-leaderboard-corrupt' : 'FAIL 33-leaderboard-corrupt');
+
+// 29: release assets and benchmark page exist after a build.
+const assets = ['dist/bench.html', 'dist/index.html', 'scripts/bench.mjs', 'scripts/bench-stats.mjs', 'LICENSE', 'CHANGELOG.md', 'docs/demo/demo.mp4'];
+const missing = assets.filter((file) => !existsSync(join(root, file)));
+check(missing.length === 0, '34-release-assets', `missing ${missing.join(', ')}`);
+console.log(missing.length === 0 ? 'PASS 34-release-assets' : `FAIL 34-release-assets (${missing.join(', ')})`);
+
+// 30: committed benchmark report has the contract schema and meets thresholds.
+let bench = null;
+try {
+  bench = JSON.parse(readFileSync(join(root, 'bench.json'), 'utf8'));
+} catch {
+  bench = null;
+}
+const benchKeys = [
+  'contract_version', 'avg_fps', 'p1_low_fps', 'frame_ms_p95', 'frames', 'load_ms', 'peak_mem_mb', 'vsync_off', 'renderer', 'os',
+];
+const benchOk =
+  bench !== null &&
+  benchKeys.every((key) => key in bench) &&
+  bench.contract_version === '1.3' &&
+  bench.avg_fps >= 60 &&
+  bench.p1_low_fps >= 30 &&
+  bench.load_ms <= 10000;
+check(benchOk, '35-bench-report', `bench.json ${JSON.stringify(bench)}`);
+console.log(benchOk ? 'PASS 35-bench-report' : 'FAIL 35-bench-report');
+
 const report = [
-  'Dao Den Long - Phase 3 headless verification (Contract v1.2)',
+  'Dao Den Long - Phase 4 headless verification (Contract v1.3)',
   `date: ${new Date().toISOString()}`,
   `node: ${process.version}`,
   `checks: ${checks}`,

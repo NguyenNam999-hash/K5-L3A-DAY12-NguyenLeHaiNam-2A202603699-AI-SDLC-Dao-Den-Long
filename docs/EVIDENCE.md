@@ -206,3 +206,61 @@ Các test Phase 1–2 sau bị luật v1.2 làm sai và đã được cập nh�
 | Thắng ở hạn chót với mọi đèn | Cần 60% và thưởng theo dầu | ending bình minh |
 | Sức chứa cố định 10 | Sức chứa tăng theo lần thắp | capacity |
 | Vùng an toàn mọi đèn sáng | Đèn `fuel < 30` mất vùng | weak safe zone |
+
+---
+
+# Phase 4 — Release v1.0.0 (Contract v1.3)
+
+Ngày: 2026-11-20 · Máy: Apple M1 Pro, 16 GB, macOS 27.0.0 · Node 22+
+
+## Lệnh tái lập
+
+```bash
+npm ci
+npm run build
+npm test
+npm run typecheck
+npm run verify
+npm run bench -- --seed 42 --duration 30 --out bench.json
+npm run soak -- --seed 7 --nights 10 --out soak.json
+node dist-node/app.js --export-leaderboard evidence/phase-4/leaderboard-export.json
+node scripts/shots-phase4.mjs
+```
+
+## Kết quả đo
+
+| Hạng mục | Kết quả | Ngưỡng | File |
+|---|---|---|---|
+| Unit test | **134 / 134** trong 13 file | tất cả xanh | `npm test` |
+| Contract verify | **35 kiểm tra**, 0 lỗi | 0 lỗi | `evidence/phase-4/headless/verify-report.txt` |
+| Benchmark | `avg_fps 217.95`, `p1_low_fps 158.77`, `p95 5.3 ms`, `load_ms 1230`, `frames 6539`, `peak_mem 1224 MB` | 60 / 30 / ≤10 000 | `bench.json`, `evidence/phase-4/bench.json` |
+| Soak | 10 Đêm, `crashes 0`, RSS `56 → 63 MB` (1.13×), 0.3 s | 0 crash, ≤1.2× | `soak.json`, `evidence/phase-4/soak.json` |
+| Leaderboard export | `{"entries":[...]}`, đúng thứ tự, file hỏng → rỗng | đúng schema | `evidence/phase-4/leaderboard-export.json` |
+| Cỡ chữ UI | nhỏ nhất **18 px** (chữ lớn 22.5 px) ở 1280×720 | ≥ 18 px | ảnh `02`, `03` |
+
+## Bằng chứng UI
+
+`evidence/phase-4/ui/`:
+
+| Ảnh | Nội dung |
+|---|---|
+| `01-menu.png` | Menu chính có nút Bảng xếp hạng |
+| `02-settings.png` | Cài đặt: âm thanh, mù màu, độ khó, giảm chuyển động, chữ lớn, phím |
+| `03-settings-large-text.png` | Tuỳ chọn chữ lớn ×1.25 |
+| `04-hud-alerts.png` | Phụ đề "Gió sắp thổi", "Đèn L4 sắp cạn dầu"; HUD 18 px |
+| `05-keybind-conflict.png` | Từ chối phím `W` trùng hành động "Tiến" |
+| `06-keybind-settings.png` | Phím Nhảy đã đổi sang `J`, lưu sau khi tải lại |
+| `07-leaderboard-empty.png` | Bảng xếp hạng trống |
+| `08-result-score-form.png` | Lưu điểm sau khi thua, top 10 hiện ngay |
+| `09-leaderboard.png` | Bảng xếp hạng từ menu |
+
+## Demo
+
+`docs/demo/demo.mp4` (dưới 5 phút): chơi Đêm 1, mở cài đặt đổi phím, xem bảng xếp hạng, chạy benchmark.
+
+## Chưa kiểm chứng / hạn chế
+
+- Số benchmark phụ thuộc GPU/máy; máy chấm của giảng viên là nguồn chính thức.
+- `peak_mem_mb` cộng RSS theo tiến trình nên cao hơn bộ nhớ riêng thực tế.
+- Nếu compositor khoá 60 Hz, `avg_fps ≈ 60` dù đã truyền cờ tắt VSync; vẫn đạt ngưỡng.
+- Release GitHub cần tài khoản có quyền; nếu `gh` chưa đăng nhập, gói `release/` và ghi chú vẫn nằm trong repo.

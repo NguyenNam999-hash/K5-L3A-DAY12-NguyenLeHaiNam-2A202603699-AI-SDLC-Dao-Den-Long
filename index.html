@@ -46,6 +46,7 @@
 
         <div id="pause-badge" class="pause-badge" hidden><span id="pause-text">Tạm dừng</span></div>
         <div id="lantern-arrow" class="lantern-arrow" hidden aria-hidden="true"><span>▲</span></div>
+        <div id="shade-arrow" class="lantern-arrow shade-arrow" hidden aria-hidden="true"><span>▲</span></div>
 
         <div id="hint" class="hint"></div>
 
@@ -68,6 +69,7 @@
         </div>
 
         <div class="controls">WASD di chuyển · Chuột nhìn · Space nhảy · Shift lướt · E thắp đèn / châm dầu · F tỏa sáng · Giữ Q nhìn từ trên cao · P/Esc tạm dừng</div>
+        <div id="alert-feed" class="alert-feed" role="status" aria-live="polite"></div>
       </div>
 
       <div id="menu-screen" class="overlay menu-screen">
@@ -86,6 +88,7 @@
           </ul>
           <div class="button-row">
             <button id="campaign-btn" class="btn primary" type="button">Bắt đầu hành trình</button>
+            <button id="leaderboard-btn" class="btn ghost" type="button">Bảng xếp hạng</button>
             <button id="menu-settings-btn" class="btn ghost" type="button">Cài đặt</button>
           </div>
           <p class="fineprint">Nhấp vào màn chơi để khóa chuột · P hoặc Esc để tạm dừng</p>
@@ -113,7 +116,7 @@
             <button id="pause-settings-btn" class="btn ghost" type="button">Cài đặt</button>
             <button id="pause-menu-btn" class="btn ghost" type="button">Về menu</button>
           </div>
-          <ul class="rules compact">
+          <ul id="pause-keys" class="rules compact">
             <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> di chuyển · <kbd>Space</kbd> nhảy · <kbd>Shift</kbd> lướt</li>
             <li><kbd>E</kbd> thắp đèn / châm dầu · <kbd>F</kbd> tỏa sáng · <kbd>M</kbd> tắt âm thanh</li>
             <li>Bóng Mực hút dầu đèn dưới 30. Đèn cạn dầu tắt và mất vùng an toàn.</li>
@@ -176,8 +179,44 @@
             </div>
           </div>
 
+          <div class="setting-row">
+            <div class="setting-copy">
+              <span class="setting-label">Giảm chuyển động</span>
+              <span class="setting-desc">Tắt rung camera và hiệu ứng chớp màn hình</span>
+            </div>
+            <button id="motion-btn" class="btn ghost" type="button" aria-pressed="false">Tắt</button>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-copy">
+              <span class="setting-label">Chữ lớn</span>
+              <span class="setting-desc">Tăng cỡ chữ giao diện thêm 25%</span>
+            </div>
+            <button id="large-text-btn" class="btn ghost" type="button" aria-pressed="false">Tắt</button>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-copy">
+              <span class="setting-label">Phím điều khiển</span>
+              <span class="setting-desc">Bấm vào nút rồi nhấn phím mới. Esc để huỷ; phím trùng sẽ bị từ chối.</span>
+            </div>
+            <button id="keybinds-reset" class="btn ghost" type="button">Khôi phục mặc định</button>
+          </div>
+          <div id="keybind-list" class="keybind-list"></div>
+          <p id="keybind-error" class="keybind-error" role="alert" hidden></p>
+
           <button id="settings-back" class="btn primary" type="button">Quay lại</button>
           <p class="fineprint">Cài đặt được lưu giữa các lần mở game.</p>
+        </div>
+      </div>
+
+      <div id="leaderboard-screen" class="overlay" hidden>
+        <div class="card leaderboard-card">
+          <p class="eyebrow">Bảng xếp hạng</p>
+          <h1>Top 10 trên máy này</h1>
+          <p class="story">Điểm là tổng các Đêm đã thắng. Bằng điểm thì mục đạt trước đứng trên.</p>
+          <div id="leaderboard-table" class="leaderboard-list"></div>
+          <button id="leaderboard-back" class="btn primary" type="button">Quay lại</button>
         </div>
       </div>
 
@@ -188,6 +227,16 @@
           <p class="story" id="overlay-reason"></p>
           <div class="score-big"><span id="overlay-score">0</span><small>điểm</small></div>
           <div id="overlay-breakdown" class="breakdown"></div>
+          <div id="score-form" class="score-form" hidden>
+            <p class="score-form-title">Lưu điểm vào Bảng xếp hạng</p>
+            <p id="score-summary" class="fineprint"></p>
+            <div class="score-form-row">
+              <input id="player-name" maxlength="12" placeholder="Tên 3–12 ký tự" aria-label="Tên người chơi" autocomplete="off" />
+              <button id="save-score-btn" class="btn primary" type="button">Lưu điểm</button>
+            </div>
+            <p id="score-error" class="keybind-error" role="alert" hidden></p>
+            <div id="result-leaderboard" class="leaderboard-list"></div>
+          </div>
           <div class="button-row">
             <button id="continue-btn" class="btn primary" type="button">Đêm kế tiếp</button>
             <button id="retry-btn" class="btn primary" type="button">Chơi lại Đêm</button>

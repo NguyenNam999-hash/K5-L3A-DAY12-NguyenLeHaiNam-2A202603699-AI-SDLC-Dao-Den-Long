@@ -3,3 +3,6 @@ dist/
 dist-node/
 *.local
 .DS_Store
+.superpowers/
+data/
+release/

@@ -1,4 +1,4 @@
-/** Single source of truth for gameplay numbers (Contract v1.2).
+/** Single source of truth for gameplay numbers (Contract v1.3).
  * `game.contract.json` must stay identical to this object (enforced by tests/contract.test.ts).
  */
 export const TUNING = {

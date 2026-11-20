@@ -1,12 +1,16 @@
 import './styles.css';
 import * as THREE from 'three';
 import { Game } from '../core/game';
+import { validateName, type LeaderboardEntry } from '../core/leaderboard';
 import { DT, TUNING } from '../core/tuning';
 import { groundHeight, isSolid } from '../core/terrain';
-import type { InputFrame, NightId } from '../core/types';
+import type { InputFrame, NightId, Shade } from '../core/types';
 import { AudioFx } from './audio';
+import { Alerts } from './alerts';
 import { Hud } from './hud';
+import { ACTIONS, formatCode, type Action } from './keybinds';
 import { Minimap } from './minimap';
+import { LeaderboardStore } from './leaderboard-store';
 import { DIFFICULTIES, Settings } from './settings';
 import { createWorld, type World } from './world';
 
@@ -32,6 +36,20 @@ const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 700);
 const hud = new Hud();
 const audio = new AudioFx();
 const minimap = new Minimap(minimapCanvas);
+const alerts = new Alerts();
+const alertFeed = document.querySelector<HTMLDivElement>('#alert-feed')!;
+const shadeArrow = document.querySelector<HTMLDivElement>('#shade-arrow')!;
+const leaderboardScreen = document.querySelector<HTMLDivElement>('#leaderboard-screen')!;
+const leaderboardTable = document.querySelector<HTMLDivElement>('#leaderboard-table')!;
+const scoreForm = document.querySelector<HTMLDivElement>('#score-form')!;
+const scoreSummary = document.querySelector<HTMLParagraphElement>('#score-summary')!;
+const scoreError = document.querySelector<HTMLParagraphElement>('#score-error')!;
+const playerName = document.querySelector<HTMLInputElement>('#player-name')!;
+const saveScoreBtn = document.querySelector<HTMLButtonElement>('#save-score-btn')!;
+const resultLeaderboard = document.querySelector<HTMLDivElement>('#result-leaderboard')!;
+const store = new LeaderboardStore();
+const lowFuelSeen = new Set<string>();
+let lastAlertKey = '';
 const settings = new Settings(audio);
 settings.onColorblindChange = (on) => world.setColorblind(on);
 
@@ -47,6 +65,14 @@ let currentNight: NightId = 1;
 let game = new Game({ seed: baseSeed, night: 1 });
 let world: World = createWorld(scene, 1);
 world.setColorblind(settings.colorblind);
+world.setReduceMotion(settings.values.reduceMotion);
+settings.onReduceMotionChange = (on) => {
+  world.setReduceMotion(on);
+  if (on) {
+    shake = 0;
+    flashEl.classList.remove('on');
+  }
+};
 let totalScore = 0;
 const nightScores: Record<NightId, number> = { 1: 0, 2: 0, 3: 0 };
 let elapsed = 0;
@@ -110,8 +136,11 @@ window.addEventListener('resize', resize);
 resize();
 
 function readInput(): InputFrame {
-  const forward = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
-  const side = (keys.has('KeyA') ? 1 : 0) - (keys.has('KeyD') ? 1 : 0);
+  const code = (action: Action): string => settings.keybinds.codeFor(action);
+  const forward =
+    (keys.has(code('moveForward')) || keys.has('ArrowUp') ? 1 : 0) -
+    (keys.has(code('moveBack')) || keys.has('ArrowDown') ? 1 : 0);
+  const side = (keys.has(code('moveLeft')) ? 1 : 0) - (keys.has(code('moveRight')) ? 1 : 0);
   const input: InputFrame = {
     moveX: side,
     moveZ: forward,
@@ -137,6 +166,7 @@ function hideOverlays(): void {
   menuScreen.hidden = true;
   introScreen.hidden = true;
   pauseScreen.hidden = true;
+  leaderboardScreen.hidden = true;
   hud.hideOverlay();
 }
 
@@ -150,6 +180,7 @@ function rebuildWorld(night: NightId): void {
   world.dispose();
   world = createWorld(scene, night);
   world.setColorblind(settings.colorblind);
+  world.setReduceMotion(settings.values.reduceMotion);
 }
 
 function toMenu(): void {
@@ -189,6 +220,9 @@ function showIntro(night: NightId): void {
   game = new Game({ seed: baseSeed + night * 7919, night });
   applyDifficulty();
   rebuildWorld(night);
+  alerts.clear();
+  lowFuelSeen.clear();
+  lastAlertKey = '';
   hud.setupNight(night, game.lanterns.length);
   const intro = INTRO[night];
   introEyebrow.textContent = `Đêm ${night} · ${intro.name}`;
@@ -254,7 +288,25 @@ settings.onClose = () => {
   }
 };
 
+/** Keeps HUD hints and menu copy in step with the player's bindings. */
+function applyKeyLabels(): void {
+  const label = (action: Action): string => settings.keyLabel(action);
+  hud.setKeyLabels({ interact: label('interact'), dash: label('dash'), pulse: label('pulse') });
+  const controls = document.querySelector<HTMLDivElement>('.controls');
+  if (controls) {
+    controls.textContent = `${label('moveForward')}${label('moveLeft')}${label('moveBack')}${label('moveRight')} di chuyển · Chuột nhìn · ${label('jump')} nhảy · ${label('dash')} lướt · ${label('interact')} thắp đèn / châm dầu · ${label('pulse')} tỏa sáng · Giữ Q nhìn từ trên cao · ${label('pause')}/Esc tạm dừng`;
+  }
+  const pauseKeys = document.querySelector<HTMLUListElement>('#pause-keys');
+  if (pauseKeys) {
+    pauseKeys.textContent = `${label('moveForward')} ${label('moveLeft')} ${label('moveBack')} ${label('moveRight')} di chuyển · ${label('jump')} nhảy · ${label('dash')} lướt · ${label('interact')} thắp đèn · ${label('pulse')} tỏa sáng · M tắt âm thanh. Bóng Mực hút dầu đèn dưới 30.`;
+  }
+}
+
+settings.onKeybindsChange = applyKeyLabels;
+applyKeyLabels();
+
 function flash(): void {
+  if (settings.values.reduceMotion) return;
   shake = 0.5;
   flashEl.classList.add('on');
   window.setTimeout(() => flashEl.classList.remove('on'), 70);
@@ -288,6 +340,64 @@ function updateArrow(): void {
   let angle = (Math.atan2(projected.x, projected.y) * 180) / Math.PI;
   if (projected.z > 1) angle = 180;
   hud.setArrow(angle, Math.hypot(target.x - game.px, target.z - game.pz));
+}
+
+const shadeProjected = new THREE.Vector3();
+
+/** Edge arrow toward the nearest shade when it is off screen. */
+function updateShadeArrow(): void {
+  let best: Shade | null = null;
+  let bestD = Number.POSITIVE_INFINITY;
+  for (const shade of game.shades) {
+    const d = Math.hypot(shade.x - game.px, shade.z - game.pz);
+    if (d < bestD) {
+      best = shade;
+      bestD = d;
+    }
+  }
+  if (!best || bestD > 30) {
+    shadeArrow.hidden = true;
+    return;
+  }
+  shadeProjected.set(best.x, best.y + 1, best.z).project(camera);
+  const inside =
+    shadeProjected.z < 1 && Math.abs(shadeProjected.x) < 0.9 && Math.abs(shadeProjected.y) < 0.9;
+  if (inside) {
+    shadeArrow.hidden = true;
+    return;
+  }
+  let angle = (Math.atan2(shadeProjected.x, shadeProjected.y) * 180) / Math.PI;
+  if (shadeProjected.z > 1) angle = 180;
+  shadeArrow.hidden = false;
+  shadeArrow.style.transform = `rotate(${angle}deg)`;
+  shadeArrow.dataset.distance = `${Math.round(bestD)} m`;
+}
+
+function checkLowFuel(): void {
+  for (const lantern of game.lanterns) {
+    const weak = lantern.lit && game.fuelOf(lantern) < TUNING.low_fuel_threshold;
+    if (weak && !lowFuelSeen.has(lantern.id)) {
+      lowFuelSeen.add(lantern.id);
+      alerts.push(`Đèn ${lantern.id} sắp cạn dầu`, 'warn');
+    } else if (!weak && lowFuelSeen.has(lantern.id)) {
+      lowFuelSeen.delete(lantern.id);
+    }
+  }
+}
+
+function renderAlerts(): void {
+  const messages = alerts.active();
+  const key = messages.map((m) => `${m.tone}:${m.text}`).join('|');
+  if (key === lastAlertKey) return;
+  lastAlertKey = key;
+  alertFeed.replaceChildren(
+    ...messages.map((message) => {
+      const line = document.createElement('div');
+      line.className = `alert ${message.tone}`;
+      line.textContent = message.tone === 'warn' ? `⚠ ${message.text}` : message.text;
+      return line;
+    }),
+  );
 }
 
 function handleEvents(): void {
@@ -332,6 +442,7 @@ function handleEvents(): void {
         break;
       case 'shade_spawned':
         audio.shadeSpawn();
+        alerts.push('Bóng Mực xuất hiện', 'warn');
         break;
       case 'game_over':
         audio.result(event.data.result === 'won');
@@ -393,6 +504,89 @@ function updateCamera(dt: number): void {
   camera.lookAt(lookTarget);
 }
 
+function nightsWon(): number {
+  return ([1, 2, 3] as NightId[]).filter((night) => nightScores[night] > 0).length;
+}
+
+function renderLeaderboard(container: HTMLDivElement, entries: LeaderboardEntry[]): void {
+  if (entries.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'fineprint';
+    empty.textContent = 'Chưa có điểm nào. Chơi một Đêm và lưu tên.';
+    container.replaceChildren(empty);
+    return;
+  }
+  const header = document.createElement('div');
+  header.className = 'leaderboard-row head';
+  for (const text of ['#', 'Tên', 'Điểm', 'Đêm', 'Lúc']) {
+    const cell = document.createElement('span');
+    cell.textContent = text;
+    header.append(cell);
+  }
+  const rows = entries.map((entry, index) => {
+    const row = document.createElement('div');
+    row.className = 'leaderboard-row';
+    const date = new Date(entry.achieved_at);
+    const when = Number.isNaN(date.getTime())
+      ? entry.achieved_at
+      : date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    for (const text of [String(index + 1), entry.name, entry.score.toLocaleString('en-US'), String(entry.nights_won), when]) {
+      const cell = document.createElement('span');
+      cell.textContent = text;
+      row.append(cell);
+    }
+    return row;
+  });
+  container.replaceChildren(header, ...rows);
+}
+
+function openLeaderboard(): void {
+  hideOverlays();
+  leaderboardScreen.hidden = false;
+  void store.load().then((entries) => renderLeaderboard(leaderboardTable, entries));
+}
+
+function closeLeaderboard(): void {
+  leaderboardScreen.hidden = true;
+  menuScreen.hidden = false;
+}
+
+function showScoreForm(): void {
+  scoreForm.hidden = false;
+  scoreForm.dataset.saved = '';
+  scoreSummary.textContent = `${totalScore.toLocaleString('en-US')} điểm · ${nightsWon()}/3 Đêm thắng`;
+  playerName.disabled = false;
+  playerName.value = '';
+  saveScoreBtn.hidden = false;
+  saveScoreBtn.disabled = false;
+  scoreError.hidden = true;
+  resultLeaderboard.replaceChildren();
+}
+
+function hideScoreForm(): void {
+  scoreForm.hidden = true;
+}
+
+async function saveScore(): Promise<void> {
+  const name = validateName(playerName.value);
+  if (!name) {
+    scoreError.textContent = 'Tên phải dài 3–12 ký tự, chỉ gồm A–Z, a–z, 0–9 và dấu _.';
+    scoreError.hidden = false;
+    return;
+  }
+  saveScoreBtn.disabled = true;
+  const entries = await store.submit({
+    name,
+    score: totalScore,
+    nights_won: nightsWon(),
+    achieved_at: new Date().toISOString(),
+    seed: baseSeed,
+  });
+  scoreForm.dataset.saved = '1';
+  scoreError.hidden = true;
+  renderLeaderboard(resultLeaderboard, entries);
+}
+
 function scheduleResult(): void {
   if (resultScheduled) return;
   resultScheduled = true;
@@ -405,6 +599,8 @@ function scheduleResult(): void {
     nightScores[currentNight] = won ? game.score : 0;
     totalScore = nightScores[1] + nightScores[2] + nightScores[3];
     hud.showResult(game, currentNight, totalScore, won && currentNight === 3);
+    if (won) hideScoreForm();
+    else showScoreForm();
   }, 900);
 }
 
@@ -437,6 +633,7 @@ function frame(now: number): void {
     hud.update(game);
   }
   if ((game.wind.active || game.windWarning) && !windWasActive && !windWarned) audio.wind();
+  if (game.windWarning && !windWarned) alerts.push('Gió sắp thổi', 'warn');
   if (game.windWarning) windWarned = true;
   if (game.wind.active) {
     windWasActive = true;
@@ -450,12 +647,16 @@ function frame(now: number): void {
     if (second <= 10 && second > 0 && second !== lastCountdownSecond) {
       lastCountdownSecond = second;
       audio.countdown();
+      if (second === 10) alerts.push('Còn 10 giây', 'warn');
     }
   }
   updateCamera(dt);
   if (phase === 'playing' || phase === 'paused') {
     minimap.update(game, yawDeg);
     updateArrow();
+    updateShadeArrow();
+    if (phase === 'playing') checkLowFuel();
+    renderAlerts();
   }
   renderer.render(scene, camera);
 
@@ -465,9 +666,9 @@ function frame(now: number): void {
 // --- Keyboard / mouse ---
 
 window.addEventListener('keydown', (event) => {
-  if (['Space', 'KeyE', 'KeyQ', 'KeyF', 'ShiftLeft', 'ShiftRight', 'ArrowUp', 'ArrowDown'].includes(event.code)) {
-    event.preventDefault();
-  }
+  const code = (action: Action): string => settings.keybinds.codeFor(action);
+  const prevent = [...ACTIONS.map(code), 'Escape', 'KeyQ', 'ArrowUp', 'ArrowDown'];
+  if (prevent.includes(event.code)) event.preventDefault();
   if (event.repeat) return;
   keys.add(event.code);
 
@@ -482,7 +683,12 @@ window.addEventListener('keydown', (event) => {
     return;
   }
 
-  if (event.code === 'KeyP' || event.code === 'Escape') {
+  if (!leaderboardScreen.hidden) {
+    if (event.code === code('pause') || event.code === 'Escape') closeLeaderboard();
+    return;
+  }
+
+  if (event.code === code('pause') || event.code === 'Escape') {
     if (!document.querySelector<HTMLDivElement>('#settings')!.hidden) {
       settings.hide();
       return;
@@ -505,13 +711,13 @@ window.addEventListener('keydown', (event) => {
   }
 
   if (phase !== 'playing') return;
-  if (event.code === 'Space') {
+  if (event.code === code('jump')) {
     jumpQueued = true;
     audio.jump();
   }
-  if (event.code === 'KeyE') interactQueued = true;
-  if (event.code === 'KeyF') pulseQueued = true;
-  if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') dashQueued = true;
+  if (event.code === code('interact')) interactQueued = true;
+  if (event.code === code('pulse')) pulseQueued = true;
+  if (event.code === code('dash')) dashQueued = true;
 });
 window.addEventListener('keyup', (event) => {
   keys.delete(event.code);
@@ -548,7 +754,13 @@ window.addEventListener('mousemove', (event) => {
 // --- Buttons / campaign ---
 
 document.querySelector<HTMLButtonElement>('#campaign-btn')!.addEventListener('click', () => startCampaign());
+document.querySelector<HTMLButtonElement>('#leaderboard-btn')!.addEventListener('click', () => openLeaderboard());
+document.querySelector<HTMLButtonElement>('#leaderboard-back')!.addEventListener('click', () => closeLeaderboard());
 document.querySelector<HTMLButtonElement>('#menu-settings-btn')!.addEventListener('click', () => openSettings('menu'));
+saveScoreBtn.addEventListener('click', () => void saveScore());
+playerName.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') void saveScore();
+});
 document.querySelector<HTMLButtonElement>('#intro-btn')!.addEventListener('click', () => beginPlay());
 document.querySelector<HTMLButtonElement>('#resume-btn')!.addEventListener('click', () => closePause());
 document.querySelector<HTMLButtonElement>('#retry-night-btn')!.addEventListener('click', () => retryNight());
@@ -559,8 +771,10 @@ document.querySelector<HTMLButtonElement>('#continue-btn')!.addEventListener('cl
   if (currentNight === 3) {
     phase = 'sunrise';
     hud.showSunrise(totalScore);
+    showScoreForm();
     audio.stopMusic();
   } else {
+    hideScoreForm();
     showIntro((currentNight + 1) as NightId);
   }
 });

@@ -16,6 +16,7 @@
   --drifter: #8fa3b8;
   --danger: #ff5a5f;
   --text: #f5f1e6;
+  --font-scale: 1;
   --panel: rgba(14, 20, 48, 0.72);
   --line: rgba(201, 180, 138, 0.22);
 }
@@ -80,7 +81,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  font-size: 13px;
+  font-size: calc(max(18px, 13px) * var(--font-scale));
 }
 
 .hud.hidden {
@@ -114,7 +115,7 @@ body {
 
 .label {
   display: block;
-  font-size: 10.5px;
+  font-size: calc(max(18px, 10.5px) * var(--font-scale));
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: rgba(245, 241, 230, 0.62);
@@ -123,7 +124,7 @@ body {
 
 .night-tag {
   margin-top: 8px;
-  font-size: 11px;
+  font-size: calc(max(18px, 11px) * var(--font-scale));
   color: var(--sand);
   letter-spacing: 0.04em;
 }
@@ -167,7 +168,7 @@ body {
 }
 
 .timer {
-  font-size: 32px;
+  font-size: calc(max(18px, 32px) * var(--font-scale));
   font-weight: 600;
   letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
@@ -193,7 +194,7 @@ body {
   border: 1px solid rgba(143, 163, 184, 0.5);
   background: rgba(18, 56, 74, 0.6);
   color: #cfe0ee;
-  font-size: 11px;
+  font-size: calc(max(18px, 11px) * var(--font-scale));
   letter-spacing: 0.08em;
 }
 
@@ -244,7 +245,7 @@ body {
 
 .score {
   margin-top: 6px;
-  font-size: 19px;
+  font-size: calc(max(18px, 19px) * var(--font-scale));
   font-weight: 600;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
@@ -252,7 +253,7 @@ body {
 
 .difficulty-tag {
   margin-top: 4px;
-  font-size: 10.5px;
+  font-size: calc(max(18px, 10.5px) * var(--font-scale));
   color: rgba(245, 241, 230, 0.5);
 }
 
@@ -266,19 +267,21 @@ body {
   background: rgba(14, 20, 48, 0.86);
   border: 1px solid var(--line);
   letter-spacing: 0.08em;
-  font-size: 12px;
+  font-size: calc(max(18px, 12px) * var(--font-scale));
 }
 
 .hint {
   position: absolute;
   left: 50%;
-  bottom: 128px;
+  bottom: 138px;
+  max-width: 82vw;
+  text-align: center;
   transform: translateX(-50%);
   padding: 9px 18px;
   border-radius: 999px;
   background: rgba(14, 20, 48, 0.84);
   border: 1px solid var(--line);
-  font-size: 13px;
+  font-size: calc(max(18px, 13px) * var(--font-scale));
   opacity: 0;
   transition: opacity 0.18s ease;
   white-space: nowrap;
@@ -312,7 +315,7 @@ body {
 }
 
 .carry-label {
-  font-size: 10.5px;
+  font-size: calc(max(18px, 10.5px) * var(--font-scale));
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(245, 241, 230, 0.62);
@@ -354,7 +357,7 @@ body {
 .charm-tag {
   margin-top: 7px;
   display: inline-block;
-  font-size: 11px;
+  font-size: calc(max(18px, 11px) * var(--font-scale));
   color: var(--gold);
   letter-spacing: 0.06em;
 }
@@ -365,7 +368,7 @@ body {
 }
 
 .skill {
-  width: 152px;
+  width: 178px;
   padding: 9px 12px;
   border-radius: 12px;
   background: var(--panel);
@@ -374,7 +377,8 @@ body {
 }
 
 .skill-label {
-  font-size: 10.5px;
+  white-space: nowrap;
+  font-size: calc(max(18px, 10.5px) * var(--font-scale));
   letter-spacing: 0.06em;
   margin-bottom: 6px;
   color: rgba(245, 241, 230, 0.78);
@@ -404,7 +408,7 @@ body {
   bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 11px;
+  font-size: calc(max(18px, 11px) * var(--font-scale));
   letter-spacing: 0.04em;
   color: rgba(245, 241, 230, 0.42);
   white-space: nowrap;
@@ -426,7 +430,7 @@ body {
   left: -12px;
   width: 24px;
   text-align: center;
-  font-size: 20px;
+  font-size: calc(max(18px, 20px) * var(--font-scale));
   color: var(--core);
   text-shadow: 0 0 14px rgba(255, 179, 71, 0.9);
 }
@@ -438,6 +442,8 @@ body {
   inset: 0;
   display: grid;
   place-items: center;
+  /* Tall cards (settings on small screens) must scroll from the top, not clip. */
+  align-items: safe center;
   padding: 24px;
   background: radial-gradient(circle at 50% 35%, rgba(20, 28, 66, 0.5), rgba(4, 6, 18, 0.86));
   backdrop-filter: blur(3px);
@@ -459,7 +465,7 @@ body {
 
 .eyebrow {
   margin: 0 0 8px;
-  font-size: 11px;
+  font-size: calc(max(18px, 11px) * var(--font-scale));
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--gold);
@@ -467,7 +473,7 @@ body {
 
 h1 {
   margin: 0 0 14px;
-  font-size: clamp(30px, 4.2vw, 46px);
+  font-size: calc(clamp(30px, 4.2vw, 46px) * var(--font-scale));
   line-height: 1.06;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -475,7 +481,7 @@ h1 {
 
 .story {
   margin: 0 0 18px;
-  font-size: 15px;
+  font-size: calc(max(18px, 15px) * var(--font-scale));
   line-height: 1.62;
   color: rgba(245, 241, 230, 0.82);
 }
@@ -486,7 +492,7 @@ h1 {
   list-style: none;
   display: grid;
   gap: 8px;
-  font-size: 13.5px;
+  font-size: calc(max(18px, 13.5px) * var(--font-scale));
   color: rgba(245, 241, 230, 0.72);
 }
 
@@ -494,12 +500,12 @@ h1 {
   content: '◈';
   color: var(--lit);
   margin-right: 9px;
-  font-size: 10px;
+  font-size: calc(max(18px, 10px) * var(--font-scale));
 }
 
 .rules.compact {
   margin-top: 18px;
-  font-size: 12.5px;
+  font-size: calc(max(18px, 12.5px) * var(--font-scale));
 }
 
 kbd {
@@ -511,7 +517,7 @@ kbd {
   border: 1px solid rgba(245, 241, 230, 0.28);
   background: rgba(245, 241, 230, 0.08);
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: calc(max(18px, 11.5px) * var(--font-scale));
   text-align: center;
 }
 
@@ -521,7 +527,7 @@ kbd {
   border-radius: 999px;
   padding: 11px 22px;
   font: inherit;
-  font-size: 13.5px;
+  font-size: calc(max(18px, 13.5px) * var(--font-scale));
   font-weight: 600;
   letter-spacing: 0.03em;
   cursor: pointer;
@@ -568,7 +574,7 @@ kbd {
 
 .fineprint {
   margin: 16px 0 0;
-  font-size: 11.5px;
+  font-size: calc(max(18px, 11.5px) * var(--font-scale));
   color: rgba(245, 241, 230, 0.46);
 }
 
@@ -580,14 +586,14 @@ kbd {
 }
 
 .score-big span {
-  font-size: 52px;
+  font-size: calc(max(18px, 52px) * var(--font-scale));
   font-weight: 700;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
 }
 
 .score-big small {
-  font-size: 13px;
+  font-size: calc(max(18px, 13px) * var(--font-scale));
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: rgba(245, 241, 230, 0.55);
@@ -601,7 +607,7 @@ kbd {
   border-radius: 12px;
   background: rgba(245, 241, 230, 0.04);
   border: 1px solid var(--line);
-  font-size: 13px;
+  font-size: calc(max(18px, 13px) * var(--font-scale));
 }
 
 .breakdown div {
@@ -620,6 +626,43 @@ kbd {
 
 .settings-card {
   width: min(720px, 94vw);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.keybind-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.keybind-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.keybind-name {
+  font-size: calc(max(18px, 14px) * var(--font-scale));
+}
+
+.keybind-btn {
+  min-width: 96px;
+  font-variant-numeric: tabular-nums;
+}
+
+.keybind-btn.capturing {
+  border-color: var(--lit);
+  color: var(--lit);
+}
+
+.keybind-error {
+  margin: 4px 0 0;
+  color: #ff9b8a;
+  font-size: calc(max(18px, 14px) * var(--font-scale));
 }
 
 .setting-row {
@@ -637,14 +680,14 @@ kbd {
 
 .setting-label {
   display: block;
-  font-size: 14px;
+  font-size: calc(max(18px, 14px) * var(--font-scale));
   font-weight: 600;
   margin-bottom: 3px;
 }
 
 .setting-desc {
   display: block;
-  font-size: 11.5px;
+  font-size: calc(max(18px, 11.5px) * var(--font-scale));
   color: rgba(245, 241, 230, 0.5);
   max-width: 320px;
 }
@@ -665,7 +708,7 @@ input[type='range'] {
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--sand);
-  font-size: 12px;
+  font-size: calc(max(18px, 12px) * var(--font-scale));
 }
 
 .seg {
@@ -684,7 +727,7 @@ input[type='range'] {
   background: transparent;
   color: rgba(245, 241, 230, 0.62);
   font: inherit;
-  font-size: 12.5px;
+  font-size: calc(max(18px, 12.5px) * var(--font-scale));
   cursor: pointer;
 }
 
@@ -729,7 +772,7 @@ input[type='range'] {
     justify-content: flex-end;
   }
   .controls {
-    font-size: 10px;
+    font-size: calc(max(18px, 10px) * var(--font-scale));
     white-space: normal;
     width: 90vw;
     text-align: center;
@@ -775,4 +818,113 @@ body.colorblind #flash {
 body.colorblind .pip.lantern:not(.on) {
   border-style: dashed;
   opacity: 0.6;
+}
+
+/* ---------------------------------------------------------------- alerts */
+
+body.large-text {
+  --font-scale: 1.25;
+}
+
+.alert-feed {
+  position: absolute;
+  left: 50%;
+  bottom: 192px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  max-width: min(760px, 86vw);
+}
+
+.alert {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(8, 10, 24, 0.84);
+  color: var(--text);
+  font-size: calc(18px * var(--font-scale));
+  line-height: 1.25;
+  text-align: center;
+}
+
+.alert.warn {
+  border-color: rgba(255, 179, 71, 0.7);
+  color: #ffd9a0;
+}
+
+.shade-arrow span {
+  color: #d8a6ff;
+  text-shadow: 0 0 14px rgba(160, 90, 255, 0.9);
+}
+
+body.reduce-motion #flash {
+  display: none;
+}
+
+/* ---------------------------------------------------------- leaderboard */
+
+.leaderboard-card {
+  width: min(680px, 94vw);
+}
+
+.score-form {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+
+.score-form-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.score-form-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.score-form-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font-family: inherit;
+  font-size: calc(18px * var(--font-scale));
+}
+
+.score-form[data-saved='1'] .score-form-row {
+  display: none;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 80px 56px 84px;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard-row:nth-child(odd) {
+  background: rgba(245, 241, 230, 0.04);
+}
+
+.leaderboard-row.head {
+  color: rgba(245, 241, 230, 0.55);
+  text-transform: uppercase;
 }
