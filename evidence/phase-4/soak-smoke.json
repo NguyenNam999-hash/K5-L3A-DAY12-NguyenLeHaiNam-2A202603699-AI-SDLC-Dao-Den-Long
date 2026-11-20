@@ -1,0 +1,11 @@
+{
+  "nights": 2,
+  "crashes": 0,
+  "results": [
+    "lost",
+    "lost"
+  ],
+  "mem_start_mb": 56,
+  "mem_end_mb": 60,
+  "duration_s": 0.1
+}

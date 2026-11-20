@@ -1,0 +1,12 @@
+{
+  "contract_version": "1.3",
+  "avg_fps": 217.95,
+  "p1_low_fps": 158.77,
+  "frame_ms_p95": 5.3,
+  "frames": 6539,
+  "load_ms": 1230,
+  "peak_mem_mb": 1224,
+  "vsync_off": true,
+  "renderer": "Chromium 153.0.8010.12 + Three.js 187 · ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+  "os": "darwin 27.0.0 (arm64)"
+}

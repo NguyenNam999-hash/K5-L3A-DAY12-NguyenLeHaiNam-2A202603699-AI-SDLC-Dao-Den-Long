@@ -1,0 +1,34 @@
+Dao Den Long - Phase 4 headless verification (Contract v1.3)
+date: 2026-11-20T12:54:44.714Z
+node: v24.14.0
+checks: 6465
+full-night-3: 234 ms
+
+01-movement: night 1, 60 ticks
+02-pickup: night 1, 60 ticks
+03-deposit: night 1, 3 ticks
+04-pulse: night 1, 3 ticks
+05-hit: night 1, 2 ticks
+06-win: night 1, 120 ticks
+07-dawn: night 1, 120 ticks
+08-invalid-inputs: night 1, 1 ticks
+09-pause: night 1, 30 ticks
+10-dash: night 1, 12 ticks
+11-charm: night 2, 30 ticks
+12-drifter-steal: night 2, 120 ticks
+13-drifter-drop: night 2, 3 ticks
+14-wind: night 3, 2100 ticks
+15-fall: night 1, 200 ticks
+16-jump-pad: night 2, 120 ticks
+17-night3-ramp: night 3, 90 ticks
+18-dropped-mote: night 1, 12 ticks
+19-night2: night 2, 1 ticks
+20-night3: night 3, 1 ticks
+21-night3-pad: night 3, 80 ticks
+25-refuel: night 1, 3 ticks
+26-lantern-out: night 1, 120 ticks
+27-drain: night 1, 180 ticks
+28-relight: night 1, 3 ticks
+29-capacity: night 1, 1 ticks
+
+ALL CHECKS PASSED

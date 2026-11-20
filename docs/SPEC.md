@@ -120,3 +120,26 @@ Phase 2 vẫn là nền; phần dưới chỉ ghi phần bị thay thế hoặc 
 | A29 | `fuel_drain` phát ở các tick `sim_tick % 60 == 0`, sau khi trừ dầu, cho từng Bóng Mực đang hút. |
 | A30 | Thưởng bình minh dùng `floor(fuel)` trên giá trị `fuel60 / 60` chưa làm tròn hiển thị. |
 | A31 | Chế độ mù màu chỉ đổi hiển thị, không đổi logic lõi hay output headless. |
+
+## Tiêu chí nghiệm thu Phase 4 (AC47–AC53)
+
+| # | Tiêu chí | Cách kiểm | Trạng thái |
+|---|---|---|---|
+| AC47 | `node scripts/bench.mjs --seed 42 --duration 30 --out bench.json` chạy cảnh chuẩn 1280×720 (200 Bóng Mực, 100 đom, L1–L3 sáng), 3 s khởi động, xuất đủ 10 trường, tự thoát mã 0 | `bench.json`, `evidence/phase-4/`, verify `35` | đạt (217.95 fps / p1 158.77 / load 1230 ms) |
+| AC48 | Benchmark tắt sinh thêm, sát thương, nhặt đom, hao dầu, kết thúc Đêm; Bóng Mực vẫn `wander`; không input; camera quỹ đạo 30 m / 15 m / 15 s | `tests/bench-mode.test.ts`, `src/bench/main.ts` | đạt |
+| AC49 | Soak 10 Đêm một tiến trình, seed `7+i`, input 30 tick/5%/3%/2%/10%, xuất `soak.json`; crash 0; RSS cuối ≤ 1.2× đầu | `tests/soak.test.ts`, `soak.json`, verify `31` | đạt (0 crash, 56→63 MB) |
+| AC50 | Bảng xếp hạng top 10 trên đĩa, tên 3–12 `[A-Za-z0-9_]`, điểm giảm dần, hoà giữ thứ tự, đủ 5 trường, xem từ menu, lưu sau khi mở lại | `tests/leaderboard.test.ts`, `tests/server.test.ts`, `tests/leaderboard-store.test.ts`, ảnh `07`–`09` | đạt |
+| AC51 | `--export-leaderboard out.json` xuất `{"entries":[...]}` đúng thứ tự; file hỏng đọc thành rỗng | verify `32`, `33` | đạt |
+| AC52 | Đổi phím 9 hành động, báo trùng, khôi phục mặc định, lưu; phụ đề Bóng Mực/gió/10 giây/đèn yếu; giảm chuyển động; chữ ≥ 18 px và tuỳ chọn ×1.25 | `tests/keybinds.test.ts`, `tests/alerts.test.ts`, ảnh `02`–`06` | đạt |
+| AC53 | Contract 1.3 có `bench_cmd`, `soak_cmd`; README/CHANGELOG/CREDITS/LICENSE/retro/demo đủ; tag `phase-4` + Release `v1.0.0` | verify `30`, `34`; `git tag`; GitHub Release | đạt (xem EVIDENCE) |
+
+## Giả định Phase 4 (A34–A39)
+
+| # | Giả định |
+|---|---|
+| A34 | Chế độ benchmark chỉ là cờ trình diễn, mặc định tắt; mọi scenario cũ giữ nguyên output byte-for-byte. |
+| A35 | Cảnh benchmark không vẽ HUD DOM; "đầy đủ hiệu ứng và ánh sáng" hiểu là cảnh 3D + `world.update`. |
+| A36 | `peak_mem_mb` là tổng RSS cây tiến trình Chromium, lấy mẫu 250 ms; `null` nếu HĐH không có `ps`. |
+| A37 | `load_ms` tính từ lúc tiến trình benchmark bắt đầu tới khung hình đầu tiên, sai số polling ≤ 50 ms. |
+| A38 | Soak chạy một Đêm khởi động nóng bị bỏ và gọi GC trước cả hai mốc RSS, để loại chi phí biên dịch JIT khỏi phép đo rò rỉ. |
+| A39 | Khi phục vụ tĩnh không có API, bảng xếp hạng dùng `localStorage`; khi có `dist-node/app.js`, file `data/leaderboard.json` là nguồn chính. |

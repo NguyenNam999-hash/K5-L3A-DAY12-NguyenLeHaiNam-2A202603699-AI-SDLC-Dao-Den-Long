@@ -185,3 +185,16 @@ Cách tiết kiệm đã dùng:
   biểu đồ trạng thái (thời điểm thắp, dầu, số lần bị đánh) trước khi chỉnh tham số.
 - **Nếu làm lại**: viết bot "pre-fill rồi thắp cuối" ngay từ đầu, và đặt test cho luật thắng trước renderer.
 - **Bài học**: log ngắn có mốc tick rẻ hơn đoán; ảnh chụp cận cảnh mới thấy thanh dầu, ảnh toàn cảnh thì không.
+
+## Retro Phase 4
+
+Phase 4 dùng skill `brainstorming` → design doc → `writing-plans` → `executing-plans` (native), cùng
+skill `dao-den-long-contract`. Ledger ghi 12 task và 9 "Ruling" cho các chỗ lệch kế hoạch.
+
+- **Đo trước khi tối ưu:** benchmark thật cho 218 fps; không phải gộp draw call.
+- **Hai lỗi tự tạo:** (1) test rò rỉ RSS 1.38× do JIT, sửa bằng Đêm khởi động nóng + GC; (2) `findLast`
+  không có trong ES2022, typecheck bắt.
+- **Một vi phạm TDD:** viết test server trước nhưng chạy sau khi có code; đã tạm bỏ file để xác nhận đỏ,
+  ghi vào retro.
+- **Harness hiệu quả nhất:** `AGENTS.md` (13 bất biến), skill contract, `verify.mjs`, ảnh Playwright.
+- Chi tiết đầy đủ và ước tính token: [RETRO.md](RETRO.md).

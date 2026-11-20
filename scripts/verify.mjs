@@ -374,7 +374,7 @@ const contractOk =
   typeof contract.run_cmd === 'string' &&
   contract.run_cmd.includes('app.js');
 check(contractOk, '30-contract-v1.3', 'contract_version/bench_cmd/soak_cmd/run_cmd mismatch');
-console.log(contractOk ? 'PASS 25-contract-v1.3' : 'FAIL 25-contract-v1.3');
+console.log(contractOk ? 'PASS 30-contract-v1.3' : 'FAIL 30-contract-v1.3');
 
 // 26: soak smoke run (2 nights) has the documented shape and no crash.
 const soakOut = join(root, 'evidence/phase-4/soak-smoke.json');
@@ -397,7 +397,7 @@ const soakOk =
   soakReport.crashes === 0 &&
   soakReport.mem_end_mb <= soakReport.mem_start_mb * 1.2;
 check(soakOk, '31-soak', `exit ${soak.status}, report ${JSON.stringify(soakReport)}`);
-console.log(soakOk ? 'PASS 26-soak' : 'FAIL 26-soak');
+console.log(soakOk ? 'PASS 31-soak' : 'FAIL 31-soak');
 
 // 27: leaderboard export writes the exact shape in score order.
 const lbInput = join(root, 'evidence/phase-4/leaderboard-input.json');
@@ -428,7 +428,7 @@ const exportOk =
   exportJson.entries[0].name === 'High_01' &&
   exportJson.entries[1].name === 'Low_01';
 check(exportOk, '32-leaderboard-export', `exit ${exported.status}, file ${JSON.stringify(exportJson)}`);
-console.log(exportOk ? 'PASS 27-leaderboard-export' : 'FAIL 27-leaderboard-export');
+console.log(exportOk ? 'PASS 32-leaderboard-export' : 'FAIL 32-leaderboard-export');
 
 // 28: a corrupt leaderboard file exports as an empty list, never crashes.
 const corruptInput = join(root, 'evidence/phase-4/leaderboard-corrupt.json');
@@ -445,13 +445,13 @@ try {
 }
 const corruptOk = corruptRun.status === 0 && corruptJson !== null && Array.isArray(corruptJson.entries) && corruptJson.entries.length === 0;
 check(corruptOk, '33-leaderboard-corrupt', `exit ${corruptRun.status}, file ${JSON.stringify(corruptJson)}`);
-console.log(corruptOk ? 'PASS 28-leaderboard-corrupt' : 'FAIL 28-leaderboard-corrupt');
+console.log(corruptOk ? 'PASS 33-leaderboard-corrupt' : 'FAIL 33-leaderboard-corrupt');
 
 // 29: release assets and benchmark page exist after a build.
 const assets = ['dist/bench.html', 'dist/index.html', 'scripts/bench.mjs', 'scripts/bench-stats.mjs', 'LICENSE', 'CHANGELOG.md', 'docs/demo/demo.mp4'];
 const missing = assets.filter((file) => !existsSync(join(root, file)));
 check(missing.length === 0, '34-release-assets', `missing ${missing.join(', ')}`);
-console.log(missing.length === 0 ? 'PASS 29-release-assets' : `FAIL 29-release-assets (${missing.join(', ')})`);
+console.log(missing.length === 0 ? 'PASS 34-release-assets' : `FAIL 34-release-assets (${missing.join(', ')})`);
 
 // 30: committed benchmark report has the contract schema and meets thresholds.
 let bench = null;
@@ -471,7 +471,7 @@ const benchOk =
   bench.p1_low_fps >= 30 &&
   bench.load_ms <= 10000;
 check(benchOk, '35-bench-report', `bench.json ${JSON.stringify(bench)}`);
-console.log(benchOk ? 'PASS 30-bench-report' : 'FAIL 30-bench-report');
+console.log(benchOk ? 'PASS 35-bench-report' : 'FAIL 35-bench-report');
 
 const report = [
   'Dao Den Long - Phase 4 headless verification (Contract v1.3)',

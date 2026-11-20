@@ -186,7 +186,7 @@ async function main() {
       load_ms: loadMs,
       peak_mem_mb: peak,
       vsync_off: true,
-      renderer: result.renderer,
+      renderer: result.renderer.replace('Chromium', `Chromium ${browser.version()}`),
       os: `${platform()} ${release()} (${arch()})`,
     };
     mkdirSync(dirname(args.out), { recursive: true });

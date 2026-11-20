@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "name": "High_01",
+      "score": 900,
+      "nights_won": 3,
+      "achieved_at": "2026-11-20T11:00:00+07:00",
+      "seed": 7
+    },
+    {
+      "name": "Low_01",
+      "score": 100,
+      "nights_won": 1,
+      "achieved_at": "2026-11-20T10:00:00+07:00",
+      "seed": 7
+    }
+  ]
+}
