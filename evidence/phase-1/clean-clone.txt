@@ -1,10 +1,17 @@
+# Clean-clone check of tag phase-1 (commit 8970f32)
+
 $ npm ci
 
 added 52 packages in 2s
 $ npm run build
-- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-✓ built in 288ms
+✓ built in 272ms
+$ npx vitest run
+ Test Files  3 passed (3)
+      Tests  44 passed (44)
+$ node scripts/verify.mjs
+
+ALL CHECKS PASSED
 $ node dist-node/headless/main.js --seed 7 --night 1 --ticks 120 --out out.jsonl
 exit=0
 {"type":"end","ticks":120,"state":"playing","score":0}
