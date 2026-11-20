@@ -295,12 +295,15 @@ body {
   bottom: 42px;
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 18px;
 }
 
 .carry-wrap {
-  min-width: 240px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 300px;
   padding: 10px 14px;
   border-radius: 14px;
   background: var(--panel);

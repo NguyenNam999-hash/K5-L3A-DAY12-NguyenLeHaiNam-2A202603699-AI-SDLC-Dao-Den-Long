@@ -464,7 +464,10 @@ window.addEventListener('keydown', (event) => {
   }
 
   if (phase !== 'playing') return;
-  if (event.code === 'Space') jumpQueued = true;
+  if (event.code === 'Space') {
+    jumpQueued = true;
+    audio.jump();
+  }
   if (event.code === 'KeyE') interactQueued = true;
   if (event.code === 'KeyF') pulseQueued = true;
   if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') dashQueued = true;

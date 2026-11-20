@@ -149,8 +149,9 @@ export class Hud {
 
     this.charmTag.hidden = game.charmTicks <= 0;
     if (game.charmTicks > 0) this.charmTag.textContent = `Bùa Gió ${Math.ceil(game.charmTicks * DT)} s`;
-    this.windTag.hidden = !game.wind.active;
+    this.windTag.hidden = !game.wind.active && !game.windWarning;
     if (game.wind.active) this.windTag.textContent = `Gió mạnh · ${Math.round(game.wind.dirDeg)}°`;
+    else if (game.windWarning) this.windTag.textContent = 'Gió sắp tới';
 
     this.setHint(this.buildHint(game));
   }

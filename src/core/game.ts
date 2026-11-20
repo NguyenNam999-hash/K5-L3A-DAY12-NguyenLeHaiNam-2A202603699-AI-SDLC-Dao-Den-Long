@@ -1008,7 +1008,7 @@ export class Game {
     if (this.invulnTicks > 0) return;
 
     for (const s of this.shades) {
-      if (s.state === 'spawning') continue;
+      if (s.state === 'spawning' || s.state === 'stunned' || s.state === 'recoil') continue;
       if (s.safeTicks > 0) continue;
       if (Math.hypot(s.x - this.px, s.z - this.pz) > TUNING.shade_hit_radius) continue;
       if (Math.abs((s.y - 1) - this.py) > 1.5) continue;
