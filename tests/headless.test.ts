@@ -113,6 +113,11 @@ describe('headless CLI', () => {
 
     const wrongType = writeJson('wrong-type.json', { player: { pos: 'oops' } });
     expect(runHeadless(['--seed', '1', '--ticks', '1', '--out', join(dir, 'y.jsonl'), '--scenario', wrongType])).toBe(2);
+
+    const unknownLantern = writeJson('unknown-lantern.json', { lanterns: [{ id: 'L99' }] });
+    expect(
+      runHeadless(['--seed', '1', '--ticks', '1', '--out', join(dir, 'y.jsonl'), '--scenario', unknownLantern]),
+    ).toBe(2);
   });
 
   it('exits 2 on malformed inputs', () => {

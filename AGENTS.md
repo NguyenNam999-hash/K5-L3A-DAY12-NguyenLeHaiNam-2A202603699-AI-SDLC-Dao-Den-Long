@@ -5,7 +5,7 @@
 ```bash
 npm ci
 npm run build          # esbuild headless -> dist-node/, vite -> dist/
-npm test               # vitest, 43 test
+npm test               # vitest, 44 test
 npm run verify         # chạy CLI đã build + kiểm tra contract, ghi evidence/phase-1/headless/
 npm run bot            # bot chơi tự động, phải thắng thì mới exit 0
 npm run dev            # vite + mở trình duyệt

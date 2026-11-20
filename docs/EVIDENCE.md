@@ -7,7 +7,7 @@ Máy chạy: macOS 27.0, Node v24.14.0, Chromium headless 1440×900.
 
 | Yêu cầu | Cách kiểm chứng | Bằng chứng | Kết quả |
 |---|---|---|---|
-| Logic game đúng (di chuyển, nhặt, nạp, pulse, sát thương, thắng/thua, điểm) | `npm test` (Vitest, 43 test) | `evidence/phase-1/test-report.txt` | **43/43 đạt** |
+| Logic game đúng (di chuyển, nhặt, nạp, pulse, sát thương, thắng/thua, điểm) | `npm test` (Vitest, 44 test) | `evidence/phase-1/test-report.txt` | **44/44 đạt** |
 | Contract headless: tham số, tick model, snapshot/event/end, mã thoát | `npm run verify` | `evidence/phase-1/headless/verify-report.txt` + 10 file `.jsonl` | **10/10 đạt** |
 | Tất định | Chạy 2 lần cùng seed rồi so byte | `headless/determinism-sha256.txt` | **hash giống hệt** |
 | Chơi được tới thắng | Bot chơi tự động, rồi replay inputs qua CLI chính thức | `headless/bot-summary.json`, `headless/bot-run.jsonl` | **thắng ở tick 5 282, 2 775 điểm** |
@@ -24,7 +24,7 @@ Máy chạy: macOS 27.0, Node v24.14.0, Chromium headless 1440×900.
 ```bash
 npm ci
 npm run build
-npm test                 # 43 unit test
+npm test                 # 44 unit test
 npm run verify           # 10 kiểm tra contract, ghi evidence/phase-1/headless/
 npm run bot              # bot chơi; thắng thì exit 0 và ghi bot-inputs.json
 node dist-node/headless/main.js --seed 7 --night 1 --ticks 18000 \
@@ -43,7 +43,7 @@ node scripts/shots.mjs
 
 ## Chi tiết từng bằng chứng
 
-### 1. Unit test — 43 test
+### 1. Unit test — 44 test
 
 Phủ: dựng scenario (không cộng điểm cho đèn đặt sẵn), di chuyển theo `cam_yaw_deg`, chuẩn hóa vector,
 giới hạn đảo, nhảy, nhặt theo `pickup_radius`, `carry_capacity`, nạp đèn (thiếu bao nhiêu nạp bấy nhiêu),

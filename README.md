@@ -117,7 +117,7 @@ Phần thêm nằm ngoài lõi hoặc chỉ dùng đúng các tham số contract
 - **Bot chơi tự động** (`npm run bot`) tạo file inputs; file này chạy lại qua CLI chính thức và thắng Đêm 1 — vừa là bằng chứng "chơi được tới thắng", vừa là test hồi quy.
 - **Màn kết quả** hiển thị bảng điểm chi tiết theo từng nguồn điểm.
 
-Bằng chứng phần cũ vẫn đúng sau khi thêm: 43 unit test và 10 kiểm tra contract đều đạt; `game.contract.json`
+Bằng chứng phần cũ vẫn đúng sau khi thêm: 44 unit test và 10 kiểm tra contract đều đạt; `game.contract.json`
 không đổi; output headless vẫn đúng định dạng và tất định.
 
 ## Cấu trúc
@@ -135,7 +135,7 @@ docs/            SPEC, EVIDENCE, AI-LOG
 ## Kiểm chứng
 
 ```bash
-npm test          # 43 unit test
+npm test          # 44 unit test
 npm run build
 npm run verify    # 10 kiểm tra contract trên CLI đã build
 npm run bot       # bot chơi và ghi evidence/phase-1/headless/bot-inputs.json

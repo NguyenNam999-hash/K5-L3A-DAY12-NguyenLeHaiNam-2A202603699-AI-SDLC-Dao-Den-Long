@@ -277,6 +277,18 @@ describe('shades', () => {
     expect(game.flames).toBe(TUNING.flames);
   });
 
+  it('normalises scenario shades that start inside a lit lantern safe circle', () => {
+    const { game } = simulate({
+      ticks: 0,
+      scenario: {
+        ...still,
+        lanterns: [{ id: 'L1', pos: [0, 0, 0], lit: true }],
+        shades: [{ pos: [1, 0, 0] }],
+      },
+    });
+    expect(Math.hypot(game.shades[0]!.x, game.shades[0]!.z)).toBeGreaterThan(TUNING.safe_radius);
+  });
+
   it('gives invulnerability after a hit', () => {
     const { events } = simulate({
       ticks: 120,

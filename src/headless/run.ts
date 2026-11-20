@@ -135,6 +135,10 @@ export function runHeadless(argv: string[]): number {
     mkdirSync(dirname(args.out), { recursive: true });
     writeFileSync(args.out, `${lines.join('\n')}\n`, 'utf8');
   } catch (err) {
+    if (err instanceof FormatError) {
+      process.stderr.write(`${err.message}\n`);
+      return 2;
+    }
     process.stderr.write(`simulation error: ${(err as Error).message}\n`);
     return 3;
   }

@@ -1,5 +1,5 @@
 import { Rng } from './rng';
-import type { Scenario } from './scenario';
+import { FormatError, type Scenario } from './scenario';
 import {
   DT,
   ISLAND_RADIUS,
@@ -187,7 +187,7 @@ export class Game {
       if (scenario.lanterns) {
         for (const spec of scenario.lanterns) {
           const lantern = this.lanterns.find((l) => l.id === spec.id);
-          if (!lantern) throw new Error(`scenario.lanterns: unknown lantern id "${spec.id}"`);
+          if (!lantern) throw new FormatError(`scenario.lanterns: unknown lantern id "${spec.id}"`);
           if (spec.pos) {
             lantern.x = spec.pos[0];
             lantern.z = spec.pos[2];
@@ -199,6 +199,9 @@ export class Game {
       }
       if (scenario.time_left_s !== undefined) this.timeBase = scenario.time_left_s;
     }
+
+    // Literal lanterns already lit hold their safe circle from tick 0.
+    for (const shade of this.shades) this.keepOutOfLanternLight(shade);
 
     // Scenario setup never emits events and never scores.
     if (!scenario?.motes && this.randomMotes) {
@@ -408,8 +411,10 @@ export class Game {
   private spawnShade(emitEvent: boolean, minRadius = 18, maxRadius = 26): void {
     const angle = this.rng.range(0, Math.PI * 2);
     const radius = this.rng.range(minRadius, maxRadius);
+    let id = `S${++this.shadeSeq}`;
+    while (this.shades.some((existing) => existing.id === id)) id = `S${++this.shadeSeq}`;
     const shade: Shade = {
-      id: `S${++this.shadeSeq}`,
+      id,
       x: Math.cos(angle) * radius,
       z: Math.sin(angle) * radius,
       state: 'chase',
