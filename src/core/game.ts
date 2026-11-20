@@ -77,6 +77,8 @@ export class Game {
   charms: Charm[] = [];
 
   wind = { active: false, dirDeg: 0 };
+  /** True during the 2 s leaf warning before a Night 3 gust (UI only). */
+  windWarning = false;
 
   /** UI-only difficulty knobs. Headless never touches them, so default output is unchanged. */
   shadeSpeedMul = 1;
@@ -101,6 +103,8 @@ export class Game {
   private dashDirX = 0;
   private dashDirZ = 1;
   private padLocked = false;
+  private padVx = 0;
+  private padVz = 0;
 
   private falling = false;
   private respawnTicks = 0;
@@ -165,11 +169,18 @@ export class Game {
     this.updateWind(dt);
     this.movePlayer(input, dt);
     this.checkFall();
+    if (this.state !== 'playing') {
+      this.prev = { ...input };
+      return;
+    }
 
     if (!this.falling) {
       this.collectMotes();
       this.collectCharms();
       if (input.interact && !this.prev.interact) this.tryInteract();
+
+      // Step 6: lit lanterns claim their safe circle before Pulse resolves.
+      for (const shade of this.shades) this.keepOutOfLanternLight(shade);
 
       if (input.pulse && !this.prev.pulse && this.pulseCdTicks <= 0 && this.carried >= TUNING.pulse_cost) {
         this.pulse();
@@ -179,6 +190,10 @@ export class Game {
     this.updateShades(dt);
     this.updateDrifters(dt);
     this.contact();
+    if (this.state !== 'playing') {
+      this.prev = { ...input };
+      return;
+    }
 
     this.spawnScheduled();
 
@@ -471,6 +486,7 @@ export class Game {
     }
     if (t === this.nextGustTick - PHYSICS.wind_warn_ticks) this.windWarnTicks = PHYSICS.wind_warn_ticks;
     if (this.windWarnTicks > 0) this.windWarnTicks -= 1;
+    this.windWarning = this.windWarnTicks > 0;
     if (t >= this.nextGustTick) {
       const deg = this.rng.range(0, 360);
       this.wind = { active: true, dirDeg: deg };
@@ -479,6 +495,7 @@ export class Game {
       this.windDirZ = Math.sin(rad);
       this.windTicksLeft = PHYSICS.wind_active_ticks;
       this.nextGustTick += PHYSICS.wind_period_ticks;
+      this.windWarning = false;
     }
   }
 
@@ -517,12 +534,14 @@ export class Game {
       if (this.grounded) this.py = groundHeight(this.night, this.px, this.pz) ?? this.py;
       this.dashTicks -= 1;
       if (this.dashTicks === 0) {
-        this.vx = this.dashDirX * TUNING.player_speed;
-        this.vz = this.dashDirZ * TUNING.player_speed;
+        this.vx = this.padLocked ? this.padVx : this.dashDirX * TUNING.player_speed;
+        this.vz = this.padLocked ? this.padVz : this.dashDirZ * TUNING.player_speed;
       }
     } else if (this.padLocked) {
-      this.px += this.vx * dt;
-      this.pz += this.vz * dt;
+      this.vx = this.padVx;
+      this.vz = this.padVz;
+      this.px += this.padVx * dt;
+      this.pz += this.padVz * dt;
     } else {
       const speed = this.charmTicks > 0 ? PHYSICS.charm_speed : TUNING.player_speed;
       const dir = this.inputDirection(input);
@@ -556,6 +575,8 @@ export class Game {
         if (d <= pad.radius && Math.abs(this.py - pad.y) <= 0.6) {
           this.vx = pad.hx;
           this.vz = pad.hz;
+          this.padVx = pad.hx;
+          this.padVz = pad.hz;
           this.vy = pad.vy;
           this.grounded = false;
           this.padLocked = true;
@@ -711,7 +732,8 @@ export class Game {
     let bestD = Number.POSITIVE_INFINITY;
     for (const l of this.lanterns) {
       if (l.lit) continue;
-      const d = Math.hypot(l.x - this.px, l.y - (this.py + 1), l.z - this.pz);
+      if (Math.abs(l.y - this.py) > 1.5) continue;
+      const d = Math.hypot(l.x - this.px, l.z - this.pz);
       if (d <= TUNING.interact_radius && d < bestD) {
         best = l;
         bestD = d;
@@ -992,6 +1014,7 @@ export class Game {
       if (Math.abs((s.y - 1) - this.py) > 1.5) continue;
       this.hitPlayer(s);
       if (this.state !== 'playing') return;
+      if (this.invulnTicks > 0) return;
     }
   }
 

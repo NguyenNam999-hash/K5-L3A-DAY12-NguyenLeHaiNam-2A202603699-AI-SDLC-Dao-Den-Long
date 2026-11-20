@@ -290,6 +290,29 @@ describe('motes and lanterns', () => {
     expect(game.carried).toBe(10);
   });
 
+  it('uses the 2.0 m XZ radius on the same tier', () => {
+    const inside = simulate({
+      ticks: 3,
+      scenario: {
+        ...still,
+        player: { pos: [0, 0, 1.9], carried: 10 },
+        lanterns: [{ id: 'L1', pos: [0, 0, 0] }],
+      },
+      frames: [{ tick: 0, interact: true }, { tick: 1, interact: false }],
+    });
+    expect(inside.game.carried).toBe(0);
+    const outside = simulate({
+      ticks: 3,
+      scenario: {
+        ...still,
+        player: { pos: [0, 0, 2.1], carried: 10 },
+        lanterns: [{ id: 'L1', pos: [0, 0, 0] }],
+      },
+      frames: [{ tick: 0, interact: true }, { tick: 1, interact: false }],
+    });
+    expect(outside.game.carried).toBe(10);
+  });
+
   it('picks the nearest unlit lantern, ties by id', () => {
     const { events } = simulate({
       ticks: 3,
@@ -405,6 +428,21 @@ describe('shades', () => {
     expect(game.carried).toBe(5);
     expect(game.invulnTicks).toBe(61);
     expect(game.motes.filter((m) => m.kind === 'dropped')).toHaveLength(5);
+  });
+
+  it('loses at most one flame per tick even with several shades', () => {
+    const { events } = simulate({
+      ticks: 1,
+      scenario: {
+        ...still,
+        player: { carried: 0 },
+        shades: [
+          { pos: [0.5, 0, 0] },
+          { pos: [0, 0, 0.6] },
+        ],
+      },
+    });
+    expect(events.filter((e) => e.name === 'player_hit')).toHaveLength(1);
   });
 
   it('cannot enter a lit lantern safe circle or hit there', () => {

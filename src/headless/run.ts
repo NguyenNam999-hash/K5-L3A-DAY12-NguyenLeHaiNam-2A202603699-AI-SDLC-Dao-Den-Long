@@ -4,6 +4,7 @@ import { Game } from '../core/game';
 import { InputTrack } from '../core/input-track';
 import { parseInputs, parseScenario } from '../core/parse';
 import { FormatError, type InputsFile, type Scenario } from '../core/scenario';
+import type { NightId } from '../core/types';
 
 export class UsageError extends Error {}
 
@@ -17,7 +18,7 @@ interface Args {
   inputsPath?: string;
 }
 
-const USAGE = `Usage: node dist-node/headless/main.js --seed <int> --night 1 --ticks <int> --out <file.jsonl>
+const USAGE = `Usage: node dist-node/headless/main.js --seed <int> --night <1|2|3> --ticks <int> --out <file.jsonl>
        [--scenario <file.json>] [--inputs <file.json>] [--snapshot-every <int>]`;
 
 function readInt(argv: string[], i: number, flag: string): number {
@@ -70,7 +71,9 @@ export function parseArgs(argv: string[]): Args {
   if (!args.out) throw new UsageError(`--out is required\n${USAGE}`);
   if (args.ticks < 0) throw new UsageError('--ticks: expected >= 0');
   if (args.night === undefined) args.night = 1;
-  if (args.night !== 1) throw new UsageError(`--night: only night 1 exists in Phase 1 (got ${args.night})`);
+  if (args.night !== 1 && args.night !== 2 && args.night !== 3) {
+    throw new UsageError(`--night: expected 1, 2 or 3 (got ${args.night})`);
+  }
   return args as Args;
 }
 
@@ -120,7 +123,7 @@ export function runHeadless(argv: string[]): number {
 
   const lines: string[] = [];
   try {
-    const game = new Game({ seed: args.seed, scenario });
+    const game = new Game({ seed: args.seed, night: args.night as NightId, scenario });
     const track = new InputTrack(inputs.frames);
 
     lines.push(JSON.stringify(game.snapshot()));
