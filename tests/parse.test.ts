@@ -57,3 +57,22 @@ describe('parseInputs v1.1', () => {
     expect(() => parseInputs({ frames: [{ tick: 0, pause: 1 }] })).toThrow(FormatError);
   });
 });
+
+describe('parseScenario v1.2', () => {
+  it('reads lantern fuel, ever_lit and player successful_lights', () => {
+    const s = parseScenario({
+      player: { successful_lights: 3 },
+      lanterns: [{ id: 'L1', lit: true, fuel: 42.5, ever_lit: true, deposited: 2 }],
+      shades: [{ pos: [0, 0, 0], state: 'drain', target_lantern_id: 'L1' }],
+    });
+    expect(s.player).toMatchObject({ successful_lights: 3 });
+    expect(s.lanterns![0]).toMatchObject({ id: 'L1', lit: true, fuel: 42.5, ever_lit: true, deposited: 2 });
+    expect(s.shades![0]).toMatchObject({ state: 'drain', target_lantern_id: 'L1' });
+  });
+
+  it('rejects negative fuel and unknown target types', () => {
+    expect(() => parseScenario({ lanterns: [{ id: 'L1', fuel: -1 }] })).toThrow(FormatError);
+    expect(() => parseScenario({ lanterns: [{ id: 'L1', fuel: 'full' }] })).toThrow(FormatError);
+    expect(() => parseScenario({ shades: [{ pos: [0, 0, 0], target_lantern_id: 3 }] })).toThrow(FormatError);
+  });
+});

@@ -8,6 +8,9 @@ export interface ScenarioLantern {
   pos?: Vec3;
   deposited?: number;
   lit?: boolean;
+  /** Fuel units; a pre-lit lantern defaults to `TUNING.fuel_max`. */
+  fuel?: number;
+  ever_lit?: boolean;
 }
 
 export interface ScenarioShade {
@@ -15,6 +18,7 @@ export interface ScenarioShade {
   pos: Vec3;
   state?: ShadeState;
   state_ticks_left?: number;
+  target_lantern_id?: string;
 }
 
 export interface ScenarioDrifter {
@@ -40,6 +44,7 @@ export interface ScenarioPlayer {
   pos?: Vec3;
   carried?: number;
   flames?: number;
+  successful_lights?: number;
   invuln_ticks?: number;
   dash_cd_ticks?: number;
   pulse_cd_ticks?: number;

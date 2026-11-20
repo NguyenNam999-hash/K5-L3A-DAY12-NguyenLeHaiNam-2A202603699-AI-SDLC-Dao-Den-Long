@@ -80,13 +80,20 @@ export class Hud {
     }
     this.carryCells.replaceChildren();
     this.carryCellEls = [];
-    for (let i = 0; i < TUNING.carry_capacity; i += 1) {
+    this.ensureCarryCells(TUNING.carry_capacity);
+    this.nightTag.textContent = `Đêm ${night} · ${NIGHT_NAMES[night]}`;
+  }
+
+  private ensureCarryCells(capacity: number): void {
+    while (this.carryCellEls.length < capacity) {
       const cell = document.createElement('div');
       cell.className = 'cell';
       this.carryCells.appendChild(cell);
       this.carryCellEls.push(cell);
     }
-    this.nightTag.textContent = `Đêm ${night} · ${NIGHT_NAMES[night]}`;
+    for (let i = capacity; i < this.carryCellEls.length; i += 1) {
+      this.carryCellEls[i]!.classList.remove('on', 'charm');
+    }
   }
 
   show(): void {
@@ -121,15 +128,20 @@ export class Hud {
 
   update(game: Game): void {
     this.flamePips.forEach((pip, i) => pip.classList.toggle('on', i < game.flames));
-    const lit = game.lanterns.filter((l) => l.lit).length;
-    this.lanternPips.forEach((pip, i) => pip.classList.toggle('on', i < lit));
+    const lit = game.litCount();
+    this.lanternPips.forEach((pip, i) => {
+      const lantern = game.lanterns[i];
+      pip.classList.toggle('on', Boolean(lantern?.lit));
+      pip.classList.toggle('weak', Boolean(lantern?.lit && game.fuelOf(lantern) < TUNING.low_fuel_threshold));
+    });
     this.lanternCount.textContent = `${lit}/${game.lanterns.length}`;
 
+    this.ensureCarryCells(game.capacity);
     this.carryCellEls.forEach((cell, i) => {
       cell.classList.toggle('on', i < game.carried);
       cell.classList.toggle('charm', game.charmTicks > 0 && i < game.carried);
     });
-    this.carryText.textContent = `${game.carried} / ${TUNING.carry_capacity}`;
+    this.carryText.textContent = `${game.carried} / ${game.capacity}`;
 
     const left = game.timeLeft();
     this.timer.textContent = formatTime(left);
@@ -157,22 +169,30 @@ export class Hud {
   }
 
   private buildHint(game: Game): string {
-    if (game.state === 'won') return 'Đêm đã sáng';
+    if (game.state === 'won') return 'Bình minh đã tới';
     if (game.state === 'lost') return 'Đêm đã khép lại';
 
-    let nearest: { dist: number; deposited: number } | null = null;
+    let nearest: { dist: number; lantern: (typeof game.lanterns)[number] } | null = null;
     for (const lantern of game.lanterns) {
-      if (lantern.lit) continue;
-      const d = Math.hypot(lantern.x - game.px, lantern.y - (game.py + 1), lantern.z - game.pz);
-      if (d <= TUNING.interact_radius && (!nearest || d < nearest.dist)) {
-        nearest = { dist: d, deposited: lantern.deposited };
+      const d = Math.hypot(lantern.x - game.px, lantern.z - game.pz);
+      if (d > TUNING.interact_radius || Math.abs(lantern.y - game.py) > 1.5) continue;
+      if (!nearest || d < nearest.dist) nearest = { dist: d, lantern };
+    }
+    if (nearest) {
+      const lantern = nearest.lantern;
+      const fuel = game.fuelOf(lantern);
+      if (lantern.lit) {
+        if (fuel >= TUNING.fuel_max) return `Đèn đầy dầu (${Math.floor(fuel)}/${TUNING.fuel_max})`;
+        if (game.carried > 0) return `E — Châm dầu (${Math.floor(fuel)}/${TUNING.fuel_max})`;
+        return `Đèn còn ${Math.floor(fuel)} dầu — cần thêm đom đóm`;
       }
+      const required = lantern.everLit ? TUNING.relight_cost : TUNING.lantern_cost;
+      if (game.carried > 0) {
+        return `E — ${lantern.everLit ? 'Thắp lại' : 'Nạp ánh sáng'} (${lantern.deposited}/${required})`;
+      }
+      return `Đèn cần ${Math.max(0, required - lantern.deposited)} đom đóm nữa`;
     }
-    if (nearest && game.carried > 0) {
-      return `E — Nạp ánh sáng (${nearest.deposited}/${TUNING.lantern_cost})`;
-    }
-    if (nearest) return `Đèn cần ${TUNING.lantern_cost - nearest.deposited} đom đóm nữa`;
-    if (game.carried >= TUNING.carry_capacity) return 'Đã đầy ánh sáng — mang về Đèn Lồng Lớn';
+    if (game.carried >= game.capacity) return 'Đã đầy ánh sáng — mang về Đèn Lồng Lớn';
     if (game.carried > 0) return `Đang mang ${game.carried} đom đóm`;
     return 'Đi qua đom đóm để nhặt ánh sáng';
   }
@@ -195,19 +215,23 @@ export class Hud {
     this.overlayTitle.textContent = won ? `${nightName} đã sáng` : 'Sương vẫn còn dày';
     this.overlayReason.textContent = won
       ? final
-        ? 'Ngọn đèn cuối cùng bừng lên. Ba hòn đảo nối nhau bằng ánh vàng, và bình minh đã tới.'
-        : `Những ngọn đèn của ${nightName} đã cháy. Con đường sang hòn đảo kế tiếp hiện ra trong sương.`
+        ? 'Ba hòn đảo giữ được ánh sáng tới bình minh. Ông Đăng nhìn những ngọn đèn còn cháy và mỉm cười.'
+        : `${game.litCount()} ngọn đèn của ${nightName} còn cháy khi bình minh lên. Con đường sang hòn đảo kế tiếp hiện ra trong sương.`
       : game.flames <= 0
         ? 'Ngọn lửa cuối cùng đã tắt. Bóng Mực quấn lấy Mây, và hòn đảo chìm lại vào sương.'
-        : 'Bình minh đến khi đảo còn tối. Đêm nay đảo vẫn chưa đủ sáng.';
+        : `Bình minh đến khi ${nightName} chưa đủ sáng. Cần ít nhất ${game.winThreshold()}/${game.lanterns.length} ngọn đèn còn cháy.`;
 
-    const timeBonus = won ? Math.floor(game.timeLeft()) * TUNING.score.per_second_left : 0;
+    const dawnLanterns = won ? game.lanterns.filter((l) => l.lit) : [];
+    const dawnBonus = dawnLanterns.reduce((sum, l) => sum + TUNING.score.per_dawn_lantern + Math.floor(game.fuelOf(l)), 0);
     const flameBonus = won ? game.flames * TUNING.score.per_flame_left : 0;
+    const drainBonus = game.stats.drainStuns * TUNING.score.per_drain_stun;
     const rows: Array<[string, string, number]> = [
       ['Đom đóm đã nạp', `${game.stats.motes} × ${TUNING.score.per_mote}`, game.stats.motes * TUNING.score.per_mote],
-      ['Đèn đã thắp', `${game.stats.lanterns} × ${TUNING.score.per_lantern}`, game.stats.lanterns * TUNING.score.per_lantern],
+      ['Đèn thắp lần đầu', `${game.stats.lanterns} × ${TUNING.score.per_first_light}`, game.stats.lanterns * TUNING.score.per_first_light],
+      ['Đèn thắp lại', `${game.stats.relights} × ${TUNING.score.per_relight}`, game.stats.relights * TUNING.score.per_relight],
       ['Bóng Mực trúng Tỏa Sáng', `${game.stats.stuns} × ${TUNING.score.per_stun}`, game.stats.stuns * TUNING.score.per_stun],
-      ['Thời gian còn lại', formatTime(game.timeLeft()), timeBonus],
+      ['Thưởng Bóng Mực đang hút dầu', `${game.stats.drainStuns} × ${TUNING.score.per_drain_stun}`, drainBonus],
+      ['Đèn còn cháy khi bình minh', `${dawnLanterns.length}`, dawnBonus],
       ['Ngọn lửa còn lại', `${game.flames} × ${TUNING.score.per_flame_left}`, flameBonus],
     ];
     if (won && night > 1) rows.push(['Điểm các đêm trước', '', totalScore - game.score]);
@@ -215,7 +239,7 @@ export class Hud {
     this.overlayScore.textContent = totalScore.toLocaleString('en-US');
     this.overlayBreakdown.innerHTML =
       rows
-        .filter(([, , value]) => value !== 0 || true)
+        .filter(([, , value]) => value !== 0)
         .map(
           ([label, detail, value]) =>
             `<div><span>${label} <em style="opacity:.6;font-style:normal">${detail}</em></span><span>${value.toLocaleString('en-US')}</span></div>`,

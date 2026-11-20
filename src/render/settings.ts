@@ -37,12 +37,14 @@ export interface PersistedSettings {
   sensitivity: number;
   difficulty: Difficulty;
   sound: boolean;
+  /** High-contrast palette that never relies on red/violet alone. */
+  colorblind: boolean;
 }
 
-const STORAGE_KEY = 'dao-den-long.settings.v2';
+const STORAGE_KEY = 'dao-den-long.settings.v3';
 
 function defaults(): PersistedSettings {
-  return { volume: 0.8, sensitivity: 0.16, difficulty: 'easy', sound: true };
+  return { volume: 0.8, sensitivity: 0.16, difficulty: 'easy', sound: true, colorblind: false };
 }
 
 function el<T extends HTMLElement>(selector: string): T {
@@ -60,6 +62,7 @@ export class Settings {
   private readonly sensitivity = el<HTMLInputElement>('#sensitivity-slider');
   private readonly sensitivityVal = el<HTMLSpanElement>('#sensitivity-val');
   private readonly soundBtn = el<HTMLButtonElement>('#sound-btn');
+  private readonly colorblindBtn = el<HTMLButtonElement>('#colorblind-btn');
   private readonly difficultyDesc = el<HTMLSpanElement>('#difficulty-desc');
   private readonly difficultyButtons = Array.from(
     document.querySelectorAll<HTMLButtonElement>('#difficulty-group .seg-btn'),
@@ -83,6 +86,11 @@ export class Settings {
       this.values.sound = !this.values.sound;
       this.sync();
     });
+    this.colorblindBtn.addEventListener('click', () => {
+      this.values.colorblind = !this.values.colorblind;
+      this.sync();
+      this.onColorblindChange(this.values.colorblind);
+    });
     for (const button of this.difficultyButtons) {
       button.addEventListener('click', () => {
         const value = button.dataset.difficulty as Difficulty | undefined;
@@ -96,9 +104,14 @@ export class Settings {
   }
 
   onClose: () => void = () => {};
+  onColorblindChange: (on: boolean) => void = () => {};
 
   get difficulty(): Difficulty {
     return this.values.difficulty;
+  }
+
+  get colorblind(): boolean {
+    return this.values.colorblind;
   }
 
   toggleSound(): boolean {
@@ -133,6 +146,7 @@ export class Settings {
             ? parsed.difficulty
             : base.difficulty,
         sound: typeof parsed.sound === 'boolean' ? parsed.sound : base.sound,
+        colorblind: typeof parsed.colorblind === 'boolean' ? parsed.colorblind : base.colorblind,
       };
     } catch {
       return defaults();
@@ -153,6 +167,10 @@ export class Settings {
     this.soundBtn.textContent = this.values.sound ? 'Bật' : 'Tắt';
     this.soundBtn.setAttribute('aria-pressed', String(this.values.sound));
     this.soundBtn.classList.toggle('off', !this.values.sound);
+    this.colorblindBtn.textContent = this.values.colorblind ? 'Bật' : 'Tắt';
+    this.colorblindBtn.setAttribute('aria-pressed', String(this.values.colorblind));
+    this.colorblindBtn.classList.toggle('off', !this.values.colorblind);
+    document.body.classList.toggle('colorblind', this.values.colorblind);
     this.audio.setEnabled(this.values.sound);
     this.audio.setVolume(this.values.volume);
     const spec = DIFFICULTIES[this.values.difficulty];

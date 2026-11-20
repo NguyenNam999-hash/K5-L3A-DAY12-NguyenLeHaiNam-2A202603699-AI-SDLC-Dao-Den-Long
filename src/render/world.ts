@@ -90,6 +90,9 @@ interface LanternFx {
   offHalo: THREE.Sprite;
   beam: THREE.Mesh;
   aura: THREE.Mesh;
+  paper: THREE.Mesh;
+  barBg: THREE.Sprite;
+  barFill: THREE.Sprite;
   phase: number;
 }
 
@@ -102,6 +105,9 @@ interface MoteFx {
 interface ShadeFx {
   group: THREE.Group;
   core: THREE.MeshStandardMaterial;
+  glow: THREE.Sprite;
+  eyeMat: THREE.MeshBasicMaterial;
+  wispMat: THREE.MeshBasicMaterial;
   wisps: THREE.Mesh[];
   eyes: THREE.Mesh[];
   lastX: number;
@@ -127,6 +133,7 @@ interface PulseFx {
 export interface World {
   update(game: Game, elapsed: number): void;
   pulse(x: number, y: number, z: number, radius: number): void;
+  setColorblind(on: boolean): void;
   dispose(): void;
 }
 
@@ -139,6 +146,22 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
   const glowViolet = makeGlowTexture('rgba(220,180,255,0.95)', 'rgba(120,60,200,0.45)');
   const glowPale = makeGlowTexture('rgba(240,244,255,0.9)', 'rgba(150,170,255,0.35)');
   const glowSea = makeGlowTexture('rgba(80,170,200,0.5)', 'rgba(40,100,130,0.22)');
+  const solid = (() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 4;
+    canvas.height = 4;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 4, 4);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  })();
+
+  const ACCENT_DEFAULT = 0x7a3cff;
+  const ACCENT_COLORBLIND = 0x00b3ff;
+  let colorblind = false;
+  const accentHex = (): number => (colorblind ? ACCENT_COLORBLIND : ACCENT_DEFAULT);
 
   scene.background = SKY_DARK.clone();
   scene.fog = new THREE.FogExp2(FOG_DARK.getHex(), 0.009);
@@ -518,8 +541,31 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
     aura.rotation.x = -Math.PI / 2;
     aura.position.y = 0.04;
     group.add(aura);
+    // Torn paper wrap: only shown in the high-contrast palette, where an off
+    // lantern must be recognisable without relying on colour.
+    const paper = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.7, 0.74, 1.02, 12, 1, true, 0.35, Math.PI * 1.55),
+      new THREE.MeshStandardMaterial({ color: 0xd9cdb3, roughness: 1, side: THREE.DoubleSide }),
+    );
+    paper.position.y = 3.75;
+    paper.visible = false;
+    group.add(paper);
+    const barBg = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: solid, color: 0x14121c, transparent: true, opacity: 0.8, depthWrite: false }),
+    );
+    barBg.scale.set(1.6, 0.16, 1);
+    barBg.position.y = 4.95;
+    barBg.visible = false;
+    group.add(barBg);
+    const barFill = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: solid, color: PALETTE.lit, transparent: true, opacity: 0.95, depthWrite: false }),
+    );
+    barFill.scale.set(1.52, 0.1, 1);
+    barFill.position.y = 4.95;
+    barFill.visible = false;
+    group.add(barFill);
     root.add(group);
-    lanternFx.set(id, { group, orb, orbMaterial, light, halo, offHalo, beam, aura, phase });
+    lanternFx.set(id, { group, orb, orbMaterial, light, halo, offHalo, beam, aura, paper, barBg, barFill, phase });
   };
 
   // --- Wind leaves ---
@@ -574,19 +620,42 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
       playerLight.intensity = 4.2 + Math.sin(elapsed * 6.1) * 0.7;
       player.visible = game.invulnTicks > 0 ? Math.sin(elapsed * 40) > -0.2 || game.invulnTicks > 30 : true;
 
-      // Lanterns + safe discs.
+      // Lanterns + fuel bars + safe discs.
       for (const lantern of game.lanterns) {
         const fx = lanternFx.get(lantern.id);
         if (!fx) continue;
+        const fuel = game.fuelOf(lantern);
+        const ratio = lantern.lit ? Math.max(0, Math.min(1, fuel / TUNING.fuel_max)) : 0;
+        const weak = lantern.lit && fuel < TUNING.low_fuel_threshold;
+        const blink = weak ? 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(elapsed * Math.PI * 2)) : 1;
         const target = lantern.lit ? 1 : 0;
-        fx.halo.material.opacity += (target * 0.95 - fx.halo.material.opacity) * 0.06;
+        fx.halo.material.opacity += (target * 0.95 * blink - fx.halo.material.opacity) * 0.06;
         fx.offHalo.material.opacity += ((1 - target) * 0.28 - fx.offHalo.material.opacity) * 0.06;
         fx.halo.scale.setScalar(5.4 + Math.sin(elapsed * 3 + fx.phase) * 0.3 * target);
-        fx.light.intensity += (target * (26 + Math.sin(elapsed * 2.6 + fx.phase) * 2.4) - fx.light.intensity) * 0.05;
+        fx.light.intensity += (target * (26 + Math.sin(elapsed * 2.6 + fx.phase) * 2.4) * blink - fx.light.intensity) * 0.05;
         (fx.beam.material as THREE.MeshBasicMaterial).opacity += (target * 0.022 - (fx.beam.material as THREE.MeshBasicMaterial).opacity) * 0.05;
-        (fx.aura.material as THREE.MeshBasicMaterial).opacity += (target * 0.55 - (fx.aura.material as THREE.MeshBasicMaterial).opacity) * 0.05;
+        const safe = lantern.lit && fuel >= TUNING.low_fuel_threshold;
+        (fx.aura.material as THREE.MeshBasicMaterial).opacity += ((safe ? 0.55 : 0) - (fx.aura.material as THREE.MeshBasicMaterial).opacity) * 0.05;
         fx.orbMaterial.emissive.setHex(lantern.lit ? PALETTE.lit : 0x2a2113);
-        fx.orbMaterial.emissiveIntensity += ((lantern.lit ? 3.4 : 0.3) - fx.orbMaterial.emissiveIntensity) * 0.06;
+        fx.orbMaterial.emissiveIntensity += ((lantern.lit ? 3.4 * (weak ? blink : 1) : 0.3) - fx.orbMaterial.emissiveIntensity) * 0.06;
+
+        // Fuel bar above the lantern.
+        fx.barBg.visible = lantern.lit;
+        fx.barFill.visible = lantern.lit;
+        if (lantern.lit) {
+          const width = 1.52 * ratio;
+          fx.barFill.scale.set(Math.max(0.001, width), 0.1, 1);
+          fx.barFill.position.x = -0.76 + width / 2;
+          (fx.barFill.material as THREE.SpriteMaterial).color.setHex(
+            weak ? (blink > 0.55 ? 0xff7a4d : PALETTE.lit) : PALETTE.lit,
+          );
+          (fx.barFill.material as THREE.SpriteMaterial).opacity = 0.6 + 0.35 * blink;
+        }
+
+        // High-contrast palette: unlit lanterns squash 20% and wear torn paper.
+        const squash = colorblind && !lantern.lit ? 0.8 : 1;
+        fx.group.scale.y += (squash - fx.group.scale.y) * 0.2;
+        fx.paper.visible = colorblind && !lantern.lit;
       }
 
       // Motes.
@@ -624,7 +693,7 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
           const group = new THREE.Group();
           const coreMat = new THREE.MeshStandardMaterial({
             color: PALETTE.shade,
-            emissive: PALETTE.shadeRim,
+            emissive: accentHex(),
             emissiveIntensity: 0.55,
             roughness: 0.65,
             transparent: true,
@@ -633,9 +702,10 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
           const core = new THREE.Mesh(new THREE.SphereGeometry(0.62, 18, 14), coreMat);
           core.scale.y = 0.8;
           group.add(core);
-          group.add(glowSprite(glowViolet, PALETTE.shadeRim, 3.2, 0.5));
+          const glow = glowSprite(glowViolet, accentHex(), 3.2, 0.5);
+          group.add(glow);
           const eyes: THREE.Mesh[] = [];
-          const eyeMat = new THREE.MeshBasicMaterial({ color: 0xd8a6ff });
+          const eyeMat = new THREE.MeshBasicMaterial({ color: colorblind ? 0x00b3ff : 0xd8a6ff });
           for (const side of [-1, 1]) {
             const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), eyeMat);
             eye.position.set(side * 0.18, 0.12, 0.5);
@@ -644,7 +714,7 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
           }
           const wisps: THREE.Mesh[] = [];
           const wispMat = new THREE.MeshBasicMaterial({
-            color: PALETTE.shadeRim,
+            color: accentHex(),
             transparent: true,
             opacity: 0.5,
             blending: THREE.AdditiveBlending,
@@ -656,7 +726,7 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
             wisps.push(wisp);
           }
           shadeRoot.add(group);
-          fx = { group, core: coreMat, wisps, eyes, lastX: shade.x, lastZ: shade.z, facing: 0 };
+          fx = { group, core: coreMat, glow, eyeMat, wispMat, wisps, eyes, lastX: shade.x, lastZ: shade.z, facing: 0 };
           shadeFx.set(shade.id, fx);
         }
         const stunned = shade.state === 'stunned';
@@ -670,7 +740,7 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
         fx.group.rotation.y = fx.facing;
         fx.lastX = shade.x;
         fx.lastZ = shade.z;
-        fx.core.emissive.setHex(stunned ? PALETTE.shadeStun : PALETTE.shadeRim);
+        fx.core.emissive.setHex(stunned ? PALETTE.shadeStun : accentHex());
         fx.core.opacity = spawning ? 0.35 : stunned ? 0.6 : 0.94;
         fx.group.scale.setScalar(spawning ? 0.5 + 0.5 * (1 - shade.stateTicksLeft / PHYSICS.shade_spawning_ticks) : stunned ? 0.86 : 1);
         fx.eyes.forEach((eye) => {
@@ -838,6 +908,17 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
       pulses.push({ mesh, material, age: 0 });
     },
 
+    setColorblind(on: boolean): void {
+      colorblind = on;
+      const accent = accentHex();
+      const eye = on ? 0x00b3ff : 0xd8a6ff;
+      for (const fx of shadeFx.values()) {
+        fx.glow.material.color.setHex(accent);
+        fx.eyeMat.color.setHex(eye);
+        fx.wispMat.color.setHex(accent);
+      }
+    },
+
     dispose(): void {
       scene.remove(root);
       root.traverse((object) => {
@@ -851,6 +932,7 @@ export function createWorld(scene: THREE.Scene, night: NightId): World {
       glowViolet.dispose();
       glowPale.dispose();
       glowSea.dispose();
+      solid.dispose();
       cloudTexture.dispose();
       if (scene.background instanceof THREE.Color) scene.background = null;
       scene.fog = null;

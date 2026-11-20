@@ -16,7 +16,7 @@ export interface Mote {
   pickupDelayTicks: number;
 }
 
-export type ShadeState = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned';
+export type ShadeState = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned' | 'drain';
 
 export interface Shade {
   id: string;
@@ -33,6 +33,8 @@ export interface Shade {
   vz: number;
   /** First ticks of a stun carry the 4 m pulse push. */
   pushTicksLeft: number;
+  /** Lantern a `drain` shade is sapping. */
+  targetLanternId?: string;
 }
 
 export interface Lantern {
@@ -41,7 +43,12 @@ export interface Lantern {
   y: number;
   z: number;
   lit: boolean;
+  /** Motes banked toward the next lighting (0..required). */
   deposited: number;
+  /** Fuel in 1/60 units, so per-tick decay never drifts. */
+  fuel60: number;
+  everLit: boolean;
+  relitCount: number;
 }
 
 export type DrifterState = 'idle' | 'chase' | 'flee' | 'removed';
@@ -92,7 +99,10 @@ export interface InputFrame {
 export type GameEventName =
   | 'mote_picked'
   | 'deposit'
+  | 'refuel'
   | 'lantern_lit'
+  | 'lantern_out'
+  | 'fuel_drain'
   | 'pulse'
   | 'player_hit'
   | 'shade_spawned'
@@ -137,6 +147,9 @@ export interface SnapshotLantern {
   pos: [number, number, number];
   lit: boolean;
   deposited: number;
+  fuel: number;
+  ever_lit: boolean;
+  relit_count: number;
 }
 
 export interface Snapshot {
@@ -152,6 +165,7 @@ export interface Snapshot {
     pos: [number, number, number];
     flames: number;
     carried: number;
+    capacity: number;
     vel: [number, number, number];
     grounded: boolean;
     invuln: number;

@@ -1,5 +1,5 @@
 /**
- * Captures Phase 2 UI screenshots with Playwright against the Vite dev server.
+ * Captures Phase 3 UI screenshots with Playwright against the Vite dev server.
  *
  * Usage: npx vite --port 5173   (in one terminal)
  *        node scripts/shots.mjs
@@ -9,7 +9,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
 
-const outDir = join('evidence', 'phase-2', 'ui');
+const outDir = join('evidence', 'phase-3', 'ui');
 mkdirSync(outDir, { recursive: true });
 
 const cached = join(
@@ -68,8 +68,11 @@ await page.evaluate(() => {
   for (const lantern of game.lanterns) {
     if (['L1', 'L2', 'L3'].includes(lantern.id)) {
       lantern.lit = true;
-      lantern.deposited = 10;
+      lantern.everLit = true;
+      lantern.fuel60 = 6000;
+      lantern.deposited = 0;
     }
+    if (lantern.id === 'L4') lantern.fuel60 = 0;
   }
   game.carried = 7;
   game.flames = 2;
@@ -98,6 +101,31 @@ await page.evaluate(() => {
 await page.waitForTimeout(1400);
 await page.screenshot({ path: join(outDir, '04-night1-lit.png') });
 
+// Low fuel: bar shrinks and the lantern blinks below 30.
+await page.evaluate(() => {
+  const game = window.__dao.game();
+  game.lanterns[0].fuel60 = 900;
+  game.lanterns[1].fuel60 = 2100;
+});
+await page.waitForTimeout(450);
+await page.screenshot({ path: join(outDir, '04c-low-fuel.png') });
+
+// Close-up: a lit lantern with a partial fuel bar.
+await page.evaluate(() => {
+  const game = window.__dao.game();
+  game.px = 0;
+  game.py = 0;
+  game.pz = 20;
+  game.facing = 0;
+  const lantern = game.lanterns.find((l) => l.id === 'L1');
+  lantern.lit = true;
+  lantern.everLit = true;
+  lantern.fuel60 = 3000;
+  window.__dao.setView(0, 0.28);
+});
+await page.waitForTimeout(1200);
+await page.screenshot({ path: join(outDir, '04d-lantern-fuel.png') });
+
 // Hold Q: simulation freezes, camera goes top-down.
 await page.keyboard.down('q');
 await page.waitForTimeout(700);
@@ -123,10 +151,51 @@ await page.screenshot({ path: join(outDir, '06-settings.png') });
 await page.click('[data-difficulty="hard"]');
 await page.waitForTimeout(250);
 await page.screenshot({ path: join(outDir, '07-settings-hard.png') });
+await page.click('#colorblind-btn');
+await page.waitForTimeout(250);
+await page.screenshot({ path: join(outDir, '07b-settings-colorblind.png') });
 await page.click('#settings-back');
 await page.waitForTimeout(250);
 await page.click('#resume-btn');
 await page.waitForTimeout(350);
+
+// High-contrast palette: blue shade rim/eyes, white warning, torn paper on an off lantern.
+await page.evaluate(() => {
+  const game = window.__dao.game();
+  game.lanterns[4].lit = false;
+  game.lanterns[4].fuel60 = 0;
+  game.shades = [
+    {
+      id: 'S9',
+      x: game.px + 4.5,
+      y: game.py + 1,
+      z: game.pz + 3.2,
+      state: 'chase',
+      stateTicksLeft: 0,
+      safeTicks: 0,
+      vx: 0,
+      vz: 0,
+      pushTicksLeft: 0,
+    },
+  ];
+});
+await page.waitForTimeout(700);
+await page.screenshot({ path: join(outDir, '11-colorblind-night1.png') });
+
+// High-contrast off lantern: squashed 20% and wearing torn paper.
+await page.evaluate(() => {
+  const game = window.__dao.game();
+  game.px = 23.8;
+  game.py = 0;
+  game.pz = 3.2;
+  game.facing = 0;
+  const lantern = game.lanterns.find((l) => l.id === 'L2');
+  lantern.lit = false;
+  lantern.fuel60 = 0;
+  window.__dao.setView(0, 0.24);
+});
+await page.waitForTimeout(900);
+await page.screenshot({ path: join(outDir, '12-colorblind-off-lantern.png') });
 
 // Night 2, bridge and jump pad.
 await page.evaluate(() => window.__dao.startNight(2));
@@ -138,8 +207,11 @@ await page.evaluate(() => {
   game.pz = 0;
   game.carried = 6;
   game.flames = 3;
-  game.lanterns[3].lit = true;
-  game.lanterns[4].lit = true;
+  for (const index of [3, 4]) {
+    game.lanterns[index].lit = true;
+    game.lanterns[index].everLit = true;
+    game.lanterns[index].fuel60 = 6000;
+  }
   game.drifters = [
     { id: 'D1', x: 37, y: 1.6, z: 2.5, state: 'chase', stolen: 0, stateTicksLeft: 0, vx: 0, vz: 0 },
   ];
@@ -168,9 +240,12 @@ await page.evaluate(() => {
   game.pz = 34;
   game.carried = 8;
   game.charmTicks = 420;
-  game.lanterns[0].lit = true;
-  game.lanterns[1].lit = true;
-  game.lanterns[3].lit = true;
+  for (const index of [0, 1, 3]) {
+    game.lanterns[index].lit = true;
+    game.lanterns[index].everLit = true;
+    game.lanterns[index].fuel60 = 6000;
+  }
+  game.lanterns[2].fuel60 = 0;
   game.wind = { active: true, dirDeg: 120 };
   window.__dao.setView(180, 0.3);
   game.shades = [

@@ -1,0 +1,62 @@
+{
+  "seed": 7,
+  "night": 1,
+  "state": "won",
+  "ticks": 14400,
+  "score": 858,
+  "time_left_s": 0,
+  "flames": 3,
+  "carried": 16,
+  "capacity": 16,
+  "lit": 3,
+  "win_threshold": 3,
+  "stats": {
+    "motes": 30,
+    "picked": 58,
+    "lanterns": 3,
+    "relights": 0,
+    "stuns": 7,
+    "drainStuns": 0,
+    "hits": 0,
+    "falls": 0,
+    "stolen": 0
+  },
+  "lanterns": [
+    {
+      "id": "L1",
+      "lit": true,
+      "fuel": 39.6,
+      "ever_lit": true,
+      "relit_count": 0
+    },
+    {
+      "id": "L2",
+      "lit": true,
+      "fuel": 19.9,
+      "ever_lit": true,
+      "relit_count": 0
+    },
+    {
+      "id": "L3",
+      "lit": true,
+      "fuel": 15.2,
+      "ever_lit": true,
+      "relit_count": 0
+    },
+    {
+      "id": "L4",
+      "lit": false,
+      "fuel": 0,
+      "ever_lit": false,
+      "relit_count": 0
+    },
+    {
+      "id": "L5",
+      "lit": false,
+      "fuel": 0,
+      "ever_lit": false,
+      "relit_count": 0
+    }
+  ],
+  "inputs_frames": 13902
+}

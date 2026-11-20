@@ -33,6 +33,7 @@ const hud = new Hud();
 const audio = new AudioFx();
 const minimap = new Minimap(minimapCanvas);
 const settings = new Settings(audio);
+settings.onColorblindChange = (on) => world.setColorblind(on);
 
 type Phase = 'menu' | 'intro' | 'playing' | 'paused' | 'result' | 'sunrise';
 
@@ -45,6 +46,7 @@ let phase: Phase = 'menu';
 let currentNight: NightId = 1;
 let game = new Game({ seed: baseSeed, night: 1 });
 let world: World = createWorld(scene, 1);
+world.setColorblind(settings.colorblind);
 let totalScore = 0;
 const nightScores: Record<NightId, number> = { 1: 0, 2: 0, 3: 0 };
 let elapsed = 0;
@@ -79,20 +81,20 @@ const INTRO: Record<NightId, { name: string; story: string; tip: string }> = {
   1: {
     name: 'Đảo Bến',
     story:
-      'Ông Đăng đứng bên bến đò, tay run run che ngọn đèn: “Đêm nay sương xuống sớm. Năm ngọn đèn ở Đảo Bến đã tắt, cháu đi gom đom đóm và thắp lại giúp ta.”',
-    tip: 'Mẹo: Bóng Mực chỉ sinh từ giây thứ 5. Thắp đèn sớm để tạo vùng an toàn trước khi chúng đông.',
+      'Ông Đăng đứng bên bến đò, tay run run che ngọn đèn: “Đêm nay sương xuống sớm. Năm ngọn đèn ở Đảo Bến đã tắt, cháu đi gom đom đóm và thắp lại giúp ta. Nhớ giữ chúng cháy tới bình minh.”',
+    tip: 'Mẹo: Mỗi đèn chỉ cháy được 100 giây. Cần ít nhất 3/5 ngọn còn sáng khi hết 4 phút — thắp sớm rồi châm dầu, đừng thắp hết rồi bỏ đi.',
   },
   2: {
     name: 'Đảo Cau',
     story:
-      '“Qua cầu tre là Đảo Cau. Hai bên cầu không có lan can, gió lại hay đổi chiều. Bục gỗ trên đảo sẽ đưa cháu sang bờ bên kia nếu cháu dám nhảy.”',
-    tip: 'Mẹo: Giữ Shift để lướt qua khoảng trống. Bùa Gió ở giữa cầu cho lướt không hồi chiêu.',
+      '“Qua cầu tre là Đảo Cau. Hai bên cầu không có lan can, gió lại hay đổi chiều. Bục gỗ trên đảo sẽ đưa cháu sang bờ bên kia nếu cháu dám nhảy. Đèn thắp lại chỉ cần 5 đom đóm.”',
+    tip: 'Mẹo: Giữ ít nhất 4/6 ngọn đèn sáng tới bình minh. Bùa Gió ở giữa cầu cho lướt không hồi chiêu.',
   },
   3: {
     name: 'Đảo Chuông',
     story:
-      '“Đảo Chuông có ba tầng. Chuông chỉ ngân khi cả bảy ngọn đèn cùng sáng. Gió mạnh sẽ thổi mỗi ba mươi giây; hãy nghe lá bay trước khi nó tới.”',
-    tip: 'Mẹo: Dốc ở 30° và 150° dẫn lên tầng một. Bục ở tầng một phóng lên tầng hai, nơi giữ ngọn đèn đầu tiên.',
+      '“Đảo Chuông có ba tầng. Chuông chỉ ngân khi những ngọn đèn còn cháy lúc bình minh. Gió mạnh sẽ thổi mỗi ba mươi giây; hãy nghe lá bay trước khi nó tới.”',
+    tip: 'Mẹo: Dốc ở 30° và 150° dẫn lên tầng một. Cần ít nhất 5/7 ngọn sáng khi hết 5 phút — Bóng Mực sẽ hút cạn đèn yếu.',
   },
 };
 
@@ -147,6 +149,7 @@ function applyDifficulty(): void {
 function rebuildWorld(night: NightId): void {
   world.dispose();
   world = createWorld(scene, night);
+  world.setColorblind(settings.colorblind);
 }
 
 function toMenu(): void {
@@ -257,10 +260,11 @@ function flash(): void {
   window.setTimeout(() => flashEl.classList.remove('on'), 70);
 }
 
-function nearestUnlit(): { x: number; y: number; z: number } | null {
+function nearestNeedy(): { x: number; y: number; z: number } | null {
   let best: { x: number; y: number; z: number; d: number } | null = null;
   for (const lantern of game.lanterns) {
-    if (lantern.lit) continue;
+    const healthy = lantern.lit && game.fuelOf(lantern) >= TUNING.low_fuel_threshold;
+    if (healthy) continue;
     const d = Math.hypot(lantern.x - game.px, lantern.y - game.py, lantern.z - game.pz);
     if (!best || d < best.d) best = { x: lantern.x, y: lantern.y, z: lantern.z, d };
   }
@@ -270,7 +274,7 @@ function nearestUnlit(): { x: number; y: number; z: number } | null {
 const projected = new THREE.Vector3();
 
 function updateArrow(): void {
-  const target = nearestUnlit();
+  const target = nearestNeedy();
   if (!target) {
     hud.setArrow(null, 0);
     return;
@@ -295,8 +299,16 @@ function handleEvents(): void {
       case 'deposit':
         audio.deposit();
         break;
+      case 'refuel':
+        audio.deposit();
+        break;
       case 'lantern_lit':
         audio.light();
+        break;
+      case 'lantern_out':
+        audio.lanternOut();
+        break;
+      case 'fuel_drain':
         break;
       case 'pulse':
         world.pulse(game.px, game.py + 0.8, game.pz, TUNING.pulse_radius);

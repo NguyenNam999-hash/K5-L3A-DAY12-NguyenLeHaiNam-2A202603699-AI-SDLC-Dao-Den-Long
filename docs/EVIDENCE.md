@@ -150,3 +150,59 @@ không phải bằng chứng thắng. Bằng chứng thắng là mục 4.
 - **FPS** chỉ đo trên một máy (macOS, Chromium headless). Chưa đo trên GPU tích hợp yếu.
 - **Độ khó** chưa được nhiều người chơi thử; Khó nhân đôi trần Bóng Mực có thể rất khó.
 - **Số liệu token** trong `docs/AI-LOG.md` là ước tính, không phải đo tự động.
+
+---
+
+# Bằng chứng kiểm chứng — Phase 3 "Đèn cạn dầu" (Contract v1.2)
+
+Mọi bằng chứng dưới đây được tạo bằng lệnh thật, lưu trong `evidence/phase-3/`.
+Máy chạy: macOS, Node v24.14.0, Chromium headless 1280×720.
+
+## Bảng yêu cầu → bằng chứng
+
+| Yêu cầu | Cách kiểm chứng | Bằng chứng | Kết quả |
+|---|---|---|---|
+| Luật Phase 3: dầu, châm dầu, thắp lại, hút dầu, ngưỡng 30, bình minh, sức chứa, điểm mới | `npm test` (Vitest) | `test-report.txt` | **94/94 test đạt** |
+| Contract headless v1.2: shape mới, event mới, scenario mới, 3 Đêm, tất định, hiệu năng | `npm run verify` | `headless/verify-report.txt` + 29 file `.jsonl` | **29/29 case đạt** |
+| Tất định | Hai lần chạy cùng seed rồi băm SHA-256 | `headless/determinism-sha256.txt` | **hai hash giống hệt** |
+| Chơi được tới thắng theo luật mới | Bot chơi Đêm 1, rồi replay inputs qua CLI chính thức | `headless/bot-summary.json`, `bot-replay.jsonl` | **thắng tick 14 400, 858 điểm, 3/5 đèn, 3 lửa** |
+| Dầu đèn | Test `lantern fuel`; verify `03`, `25`, `26` | `headless/25-refuel.jsonl`, `26-lantern-out.jsonl` | châm 6 đom → 100 dầu; cạn dầu phát `lantern_out` |
+| Bóng Mực hút dầu | Test `shade drain`; verify `27` | `headless/27-drain.jsonl` | `state=drain`, 3 event `fuel_drain` trong 180 tick |
+| Thắp lại | Test relight; verify `28` | `headless/28-relight.jsonl` | 5 đom, `relight:true`, 65 điểm |
+| Bình minh | Test ending; verify `06`, `07` | `headless/06-win.jsonl`, `07-dawn.jsonl` | 3/5 đèn → `dawn_survived` 597 điểm; 2/5 → `dawn`, 0 điểm |
+| Sức chứa | Test capacity; verify `29` | `headless/29-capacity.jsonl` | `capacity=20`, mang 19 |
+| Đầu vào sai → mã thoát 2 | verify case `08` | `headless/verify-report.txt` | exit 2, lỗi ra stderr |
+| HUD thanh dầu, đèn yếu nhấp nháy | Playwright chụp màn hình | `ui/04d-lantern-fuel.png`, `ui/04c-low-fuel.png` | thanh dầu co theo `fuel`; pip đỏ nhấp nháy |
+| Chế độ mù màu | Ảnh cài đặt + ảnh Đêm 1 | `ui/07b-settings-colorblind.png`, `ui/11-colorblind-night1.png`, `ui/12-colorblind-off-lantern.png` | Bóng Mực xanh `#00B3FF`, đèn tắt có giấy rách, pip rỗng nét đứt |
+| Menu, 3 Đêm, Bình Minh, tạm dừng | Playwright chụp màn hình | `ui/01` … `ui/10` | ảnh đúng, không lỗi console |
+| Hiệu năng headless | Chạy Đêm 3 dài 21 600 tick | `verify-report.txt` (dòng `full-night-3`) | **~0,24 s** (< 30 s) |
+| Hiệu năng giao diện | Đo requestAnimationFrame | `ui/fps.txt` | **~60 fps** ở 1280×720 |
+| Build sạch | `npm run build` | `build-log.txt` | thành công |
+
+## Lệnh tái lập
+
+```bash
+npm ci
+npm run build
+npm test                 # 94 unit test
+npm run verify           # 29 case, ghi evidence/phase-3/headless/
+npm run bot              # bot phải thắng; ghi bot-inputs.json + bot-summary.json
+node dist-node/headless/main.js --seed 7 --night 1 --ticks 14500 \
+  --inputs evidence/phase-3/headless/bot-inputs.json \
+  --out /tmp/bot-replay.jsonl --snapshot-every 600
+tail -1 /tmp/bot-replay.jsonl
+# {"type":"end","ticks":14400,"state":"won","score":858}
+```
+
+## Ghi chú test bị thay thế
+
+Các test Phase 1–2 sau bị luật v1.2 làm sai và đã được cập nhật (không `skip`):
+
+| Test cũ | Lý do | Test mới |
+|---|---|---|
+| Thời lượng 300/330/360 | Ticket đổi còn 240/270/300 | setup + headless duration |
+| +10/đom, +100/đèn | Bảng điểm mới +5, +100/+40 | lanterns, ending |
+| Thắng khi đèn cuối sáng | Bỏ thắng sớm | "không thắng sớm khi mọi đèn sáng" |
+| Thắng ở hạn chót với mọi đèn | Cần 60% và thưởng theo dầu | ending bình minh |
+| Sức chứa cố định 10 | Sức chứa tăng theo lần thắp | capacity |
+| Vùng an toàn mọi đèn sáng | Đèn `fuel < 30` mất vùng | weak safe zone |

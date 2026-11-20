@@ -75,3 +75,48 @@ thiết bị di động cảm ứng.
 ## Bằng chứng
 
 `evidence/phase-2/`: ảnh UI, JSONL của 24 kiểm tra verify, output bot + replay, báo cáo test/build.
+
+---
+
+# Spec Phase 3 — "Đèn cạn dầu" (Contract v1.2)
+
+Nguồn: `docs/phase/PHASE-3.md` (Change Request) + `docs/adr/0001-lantern-fuel-and-dawn.md`.
+Phase 2 vẫn là nền; phần dưới chỉ ghi phần bị thay thế hoặc thêm mới.
+
+## Tiêu chí nghiệm thu Phase 3
+
+| # | Yêu cầu | Cách kiểm chứng | Trạng thái |
+|---|---|---|---|
+| AC29 | Dầu đèn: tối đa 100, hao 1/giây, tính theo tick; snapshot một chữ số thập phân | `tests/core.test.ts` fuel; verify `03`, `26` | đạt |
+| AC30 | Châm dầu `used = min(carried, ceil((100-fuel)/10))`; đèn đầy dầu không được chọn | test refuel; verify `25` | đạt |
+| AC31 | Đèn cạn dầu tắt, `deposited = 0`, phát `lantern_out`, nhớ `ever_lit` | test out; verify `26` | đạt |
+| AC32 | Thắp lại đèn đã từng sáng tốn 5 đom đóm, +40 điểm, tăng `relit_count` | test relight; verify `28` | đạt |
+| AC33 | Đèn `fuel < 30` mất vùng an toàn; đúng 30 vẫn an toàn | test weak safe zone | đạt |
+| AC34 | Bóng Mực `wander` chọn đèn yếu gần nhất, vào `drain` khi ≤ 2 m, hút 5/giây | test drain; verify `27` | đạt |
+| AC35 | `drain` chuyển `chase` (Mây ≤ 6 m), `stunned` (Tỏa Sáng), `wander` (đèn tắt / fuel ≥ 30 / xa > 2 m) | test drain transitions | đạt |
+| AC36 | Châm đèn lên ≥ 30 khi có Bóng Mực trong 6 m thì đẩy ra mép, không sát thương 30 tick | test safe zone + `keepOutOfLanternLight` | đạt |
+| AC37 | Thời lượng 240/270/300; thắng khi hết giờ với `lit ≥ ceil(0.6 × tổng)`; không thắng sớm | test ending; verify `06`, `07` | đạt |
+| AC38 | Hết Ngọn Lửa thua `no_flames` trước mọi lý do khác, kể cả tick cuối | test no_flames; `checkEnd` | đạt |
+| AC39 | Điểm mới: +5/đom, +100/+40 đèn, +5/+15 Tỏa Sáng, bình minh `+50+floor(fuel)`/đèn, +50/lửa; bỏ thưởng thời gian | test ending; verify `06` | đạt |
+| AC40 | Sức chứa `10 + 2 × successful_lights`, tối đa 20; reset mỗi Đêm | test capacity; verify `29` | đạt |
+| AC41 | Snapshot v1.2 có `fuel`, `ever_lit`, `relit_count`, `player.capacity`, state `drain` | `scripts/verify.mjs` shape check | đạt |
+| AC42 | Event mới `refuel`, `lantern_out`, `fuel_drain`; `lantern_lit.relight`; reason `dawn_survived` | verify `25`–`28` | đạt |
+| AC43 | Scenario nhận `lantern.fuel/ever_lit`, `player.successful_lights`, `shade.target_lantern_id`; sai kiểu exit 2 | `tests/parse.test.ts`, `tests/headless.test.ts` | đạt |
+| AC44 | Chế độ mù màu lưu trong `localStorage`: Bóng Mực `#00B3FF`, cảnh báo `#FFFFFF` + ⚠, đèn tắt xẹp 20% + giấy rách, đèn yếu nhấp nháy | `src/render/{settings,world,hud}.ts`, `styles.css`; ảnh `07b`, `11` | đạt |
+| AC45 | HUD hiện sức chứa động, thanh dầu trên đèn, đèn yếu nhấp nháy | ảnh `04`, `04c` | đạt |
+| AC46 | Bot thắng Đêm 1 theo luật bình minh và replay được qua CLI | `npm run bot`, `evidence/phase-3/headless/bot-*` | đạt |
+
+## Giả định Phase 3 (A22–A31)
+
+| # | Giả định |
+|---|---|
+| A22 | Dầu lưu bằng số nguyên 1/60 (`fuel60`); chỉ làm tròn khi xuất snapshot/event. |
+| A23 | Bước trừ dầu chạy sau bộ đếm thời gian và trước di chuyển; đèn `fuel <= 0` tắt ngay sau bước đó. |
+| A24 | `deposited` là tiến độ của lần thắp kế tiếp; về 0 khi đèn sáng hoặc tắt. |
+| A25 | Đèn chưa sáng không có dầu (`fuel: 0`); scenario đặt `lit: true` mà thiếu `fuel` thì được 100. |
+| A26 | `successful_lights` chỉ tăng khi thắp mới hoặc thắp lại do người chơi; đèn đặt sẵn không tính. |
+| A27 | `capacity` áp dụng ngay sau lần thắp; nhặt đom đóm dừng ở `capacity`. |
+| A28 | Bóng Mực `drain` vẫn gây sát thương khi chạm Mây (không bất tử), nhưng đứng yên. |
+| A29 | `fuel_drain` phát ở các tick `sim_tick % 60 == 0`, sau khi trừ dầu, cho từng Bóng Mực đang hút. |
+| A30 | Thưởng bình minh dùng `floor(fuel)` trên giá trị `fuel60 / 60` chưa làm tròn hiển thị. |
+| A31 | Chế độ mù màu chỉ đổi hiển thị, không đổi logic lõi hay output headless. |

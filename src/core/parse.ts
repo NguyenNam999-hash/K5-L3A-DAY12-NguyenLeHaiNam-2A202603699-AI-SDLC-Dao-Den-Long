@@ -18,7 +18,7 @@ import {
   isObject,
 } from './validation';
 
-const SHADE_STATES: ShadeState[] = ['spawning', 'wander', 'chase', 'recoil', 'stunned'];
+const SHADE_STATES: ShadeState[] = ['spawning', 'wander', 'chase', 'recoil', 'stunned', 'drain'];
 const DRIFTER_STATES: DrifterState[] = ['idle', 'chase', 'flee', 'removed'];
 const MOTE_KINDS: MoteKind[] = ['random', 'dropped'];
 
@@ -46,6 +46,9 @@ export function parseScenario(raw: unknown): Scenario {
     if (p.pos !== undefined) out.player.pos = asVec3(p.pos, 'scenario.player.pos');
     if (p.carried !== undefined) out.player.carried = asNonNegativeInt(p.carried, 'scenario.player.carried');
     if (p.flames !== undefined) out.player.flames = asNonNegativeInt(p.flames, 'scenario.player.flames');
+    if (p.successful_lights !== undefined) {
+      out.player.successful_lights = asNonNegativeInt(p.successful_lights, 'scenario.player.successful_lights');
+    }
     for (const key of ['invuln_ticks', 'dash_cd_ticks', 'pulse_cd_ticks', 'charm_ticks'] as const) {
       if (p[key] !== undefined) out.player[key] = asNonNegativeInt(p[key], `scenario.player.${key}`);
     }
@@ -76,13 +79,23 @@ export function parseScenario(raw: unknown): Scenario {
       if (o.state_ticks_left !== undefined) {
         shade.state_ticks_left = asNonNegativeInt(o.state_ticks_left, `scenario.shades[${i}].state_ticks_left`);
       }
+      if (o.target_lantern_id !== undefined) {
+        shade.target_lantern_id = asString(o.target_lantern_id, `scenario.shades[${i}].target_lantern_id`);
+      }
       return shade;
     });
   }
   if (sc.lanterns !== undefined) {
     out.lanterns = asArray(sc.lanterns, 'scenario.lanterns').map((l, i) => {
       const o = asObject(l, `scenario.lanterns[${i}]`);
-      const lantern: { id: string; pos?: [number, number, number]; deposited?: number; lit?: boolean } = {
+      const lantern: {
+        id: string;
+        pos?: [number, number, number];
+        deposited?: number;
+        lit?: boolean;
+        fuel?: number;
+        ever_lit?: boolean;
+      } = {
         id: asString(o.id, `scenario.lanterns[${i}].id`),
       };
       if (o.pos !== undefined) lantern.pos = asVec3(o.pos, `scenario.lanterns[${i}].pos`);
@@ -90,6 +103,12 @@ export function parseScenario(raw: unknown): Scenario {
         lantern.deposited = asNumber(o.deposited, `scenario.lanterns[${i}].deposited`);
       }
       if (o.lit !== undefined) lantern.lit = asBoolean(o.lit, `scenario.lanterns[${i}].lit`);
+      if (o.fuel !== undefined) {
+        const fuel = asNumber(o.fuel, `scenario.lanterns[${i}].fuel`);
+        if (fuel < 0) throw new FormatError(`scenario.lanterns[${i}].fuel: expected >= 0`);
+        lantern.fuel = fuel;
+      }
+      if (o.ever_lit !== undefined) lantern.ever_lit = asBoolean(o.ever_lit, `scenario.lanterns[${i}].ever_lit`);
       return lantern;
     });
   }

@@ -1,0 +1,6 @@
+{
+  "random_motes": false,
+  "random_shades": false,
+  "random_drifters": false,
+  "lanterns": [{ "id": "L1", "pos": [0, 0, 0], "lit": true, "fuel": 1.5 }]
+}
