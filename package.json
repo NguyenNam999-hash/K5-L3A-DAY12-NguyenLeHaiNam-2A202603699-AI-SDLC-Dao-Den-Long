@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "bot": "esbuild scripts/bot.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist-node/bot.js && node dist-node/bot.js",
+    "bench": "node scripts/bench.mjs",
     "verify": "node scripts/verify.mjs"
   },
   "devDependencies": {
